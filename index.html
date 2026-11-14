@@ -160,7 +160,7 @@ function homeDash(all){
   if(!s.length) return '';
   var cnt={Green:0,Amber:0,Red:0}, sh=0, pp=0, aa=0, late=0, crit=0, beyond=0, pend=0, rs={}, tot=0, top=[];
   s.forEach(function(x){ var m=x.sm; cnt[m.health]++; pp+=m.plannedPct; aa+=m.actualPct; late+=m.lateCount; pend+=m.pendingHindrances||0; if(m.beyondEnd>0) beyond++;
-    (m.late||[]).forEach(function(j){ if(j.impact>0){ crit++; top.push({site:x.roName,sid:x.id,code:j.code,desc:j.description,delay:j.delay,impact:j.impact}); } });
+    (m.late||[]).forEach(function(j){ if(j.impact>0) crit++; if(j.delay>0) top.push({site:x.roName,sid:x.id,code:j.code,desc:j.description,delay:j.delay,impact:j.impact}); });
     Object.keys(x.reasons||{}).forEach(function(k){ rs[k]=(rs[k]||0)+x.reasons[k]; tot+=x.reasons[k]; }); });
   var n=s.length; pp=Math.round(pp/n*10)/10; aa=Math.round(aa/n*10)/10;
   var h='<div class="card" style="border-left:6px solid '+(cnt.Red?'var(--red)':cnt.Amber?'var(--amber)':'var(--green)')+';margin-top:12px"><div class="muted" style="text-transform:uppercase;font-size:11px;letter-spacing:.5px">Bird\'s-eye view of all sites</div><div style="font-size:15px;line-height:1.5;margin-top:3px"><b>'+n+'</b> active site(s): <b style="color:var(--red)">'+cnt.Red+'</b> red, <b style="color:var(--amber)">'+cnt.Amber+'</b> amber, <b style="color:var(--green)">'+cnt.Green+'</b> on time. Average progress: planned <b>'+pp+'%</b>, actual <b>'+aa+'%</b>. <b>'+late+'</b> work(s) are late, of which <b>'+crit+'</b> are delaying a finish date. <b>'+beyond+'</b> site(s) are forecast to finish after the last date.</div></div>';
@@ -180,7 +180,7 @@ function homeDash(all){
   } else rh='<p class="ok">No delay to explain.</p>';
   h+='<div class="card"><h3 style="margin-top:0">Why work is delayed (all active sites)</h3>'+rh+'</div>';
   top.sort(function(a,b){ return b.impact-a.impact||b.delay-a.delay; });
-  h+='<div class="card"><h3 style="margin-top:0">Works that are delaying a finish date</h3>'+(top.length?'<div class="scroll"><table><tr><th>Site</th><th>Work</th><th>Days late</th><th>Finish pushed by</th></tr>'+top.slice(0,10).map(function(t){ return '<tr style="cursor:pointer" onclick="openSite(\''+esc(t.sid)+'\')"><td>'+esc(t.site)+'</td><td><b>'+esc(t.code)+'</b> '+esc(t.desc)+'</td><td><b style="color:var(--red)">'+t.delay+'</b></td><td><b style="color:var(--red)">'+t.impact+' day(s)</b></td></tr>'; }).join('')+'</table></div>'+(top.length>10?'<div class="muted">and '+(top.length-10)+' more.</div>':''):'<p class="ok">No work is delaying a finish date.</p>')+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Which activities are slowing the sites</h3>'+lagBars(top.slice(0,12).map(function(t){ return {label:t.code+' '+String(t.desc).slice(0,30), sub:t.site, delay:t.delay, impact:t.impact, click:"openSite('"+t.sid+"')"}; }))+(top.length>12?'<div class="muted">and '+(top.length-12)+' more.</div>':'')+'</div>';
   var pts=[]; var worst=s.slice().sort(function(a,b){ return b.sm.slip-a.sm.slip; })[0];
   if(worst&&worst.sm.slip>0) pts.push('Most behind: <b>'+esc(worst.roName)+'</b>, '+worst.sm.slip+' days behind, expected finish '+dshow(worst.sm.forecastFinish)+'.');
   if(rk.length){ var tc=Object.keys(cats).sort(function(a,b){ return cats[b]-cats[a]; })[0]; pts.push('Biggest cause of delay: <b>'+esc(tc)+'</b> ('+Math.round(cats[tc]*100/tot)+'% of delay-days). Largest single reason: <b>'+esc(rk[0])+'</b>.'); }
@@ -275,6 +275,9 @@ function dash(d){
   tl+=mk(0,'Start','Day 1','#1f3864',true)+mk(td,'Today','Day '+td,'#2f75b5',false)+mk(planEnd,'Plan end','Day '+planEnd,'#1f3864',true)+mk(lastDay,'Last date','Day '+lastDay,'#2e7d32',false)+(Math.abs(fcDay-planEnd)>2?mk(fcDay,'Expected finish','Day '+fcDay,beyond?'#c00000':'#f37022',true):'');
   tl+='</svg>';
   h+='<div class="card"><h3 style="margin-top:0">Time line: where we are and where we will land</h3>'+tl+'</div>';
+  var dl=jobs.filter(function(j){ var q=j.st||{}; return q.delay>0; }).sort(function(a,b){ return (b.st.impact-a.st.impact)||(b.st.delay-a.st.delay); }).map(function(j){ return {label:j.code+' '+String(j.description).slice(0,34), sub:j.st.status, delay:j.st.delay, impact:j.st.impact, click:'barInfo('+d.jobs.indexOf(j)+')'}; });
+  h+='<div class="card"><h3 style="margin-top:0">Which activities are slowing the project</h3>'+lagBars(dl)+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Activity chart: planned vs actual (dates on top)</h3>'+ganttLegend()+'<div class="muted" style="margin:6px 0">Shows activities that have started, finished or are late. Tap an activity for its duration and effect on the project. The full list is in the Bar chart tab.</div><div class="scroll">'+ganttSvg(d,function(j){ var q=j.st||{}; return q.external? (q.delay>0||q.status==="Received"||q.status==="Received late") : (+j.days>0 && (j.actualStart||q.delay>0||(+q.pct>0))); })+'</div></div>';
   var share=0; jobs.forEach(function(j){ share+=+j.share||0; }); share=share||100;
   var N=Math.max(maxD,10), pl=[], k;
   for(k=0;k<=N;k++){ var acc=0; jobs.forEach(function(j){ var ps=dnum(j.planStart), pf=dnum(j.planFinish); if(ps===null||start===null) return; var a=ps-start+1,b=pf-start+1,dd=Math.max(1,b-a+1); acc+=(+j.share||0)*(k<a-1?0:k>=b?1:(k-a+1)/dd); }); pl.push(Math.min(100,acc*100/share)); }
@@ -486,32 +489,88 @@ function cancelDefect(id){
 function sendDefRem(){ if(!confirm('Send defect reminder to the contractor now?')) return; api('apiSendDefectReminder',ST.token,ST.siteId).then(function(m){ toast(m); openSite(ST.siteId); }).catch(function(e){ toast(e.message); }); }
 
 /* ---- bar chart ---- */
-function tChart(d){
+
+/* ============ bar chart with dates, click for details ============ */
+function dmon(n){ var t=new Date(n*864e5); return t.getUTCDate()+' '+MON[t.getUTCMonth()]; }
+function dSuccMap(jobs){ var m={}; jobs.forEach(function(j){ m[j.code]=m[j.code]||[]; }); jobs.forEach(function(j){ dAfter(j.after).forEach(function(p){ (m[p]=m[p]||[]).push(j.code); }); }); return m; }
+function dDownOf(m,code){ var seen={},q=[code],o=[]; while(q.length){ var c=q.shift(); (m[c]||[]).forEach(function(n){ if(!seen[n]){ seen[n]=1; o.push(n); q.push(n); } }); } return o; }
+function lagBars(items){
+  if(!items.length) return '<p class="ok">No delayed activity.</p>';
+  var mx=1; items.forEach(function(t){ mx=Math.max(mx,t.delay); });
+  return items.map(function(t){ var ab=Math.max(0,t.delay-t.impact);
+    return '<div style="margin:9px 0;'+(t.click?'cursor:pointer':'')+'"'+(t.click?' onclick="'+t.click+'"':'')+'><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><span><b>'+esc(t.label)+'</b> <span class="muted">'+esc(t.sub||'')+'</span></span><span style="white-space:nowrap"><b>'+t.delay+' d late</b>'+(t.impact>0?' · <b style="color:var(--red)">delays project '+t.impact+' d</b>':' · <span class="muted">absorbed by spare</span>')+'</span></div>'+
+      '<div style="display:flex;height:12px;background:#eef0f5;border-radius:6px;overflow:hidden"><div style="width:'+(t.impact*100/mx)+'%;background:#c00000"></div><div style="width:'+(ab*100/mx)+'%;background:#e0a030"></div></div></div>'; }).join('')+
+    '<div class="muted" style="font-size:12px"><b style="color:#c00000">&#9632;</b> days that push the project finish &nbsp; <b style="color:#e0a030">&#9632;</b> days absorbed by spare time</div>';
+}
+function ganttSvg(d,only){
   var s=d.site, start=dnum(s['Start Date']), jobs=d.jobs, today=dnum(ST.boot.today);
   var maxD=Math.max(+s['Contract Days']||105, (dnum(d.sm.forecastFinish)||0)-start+1, today-start+1)+3;
   jobs.forEach(function(j){ var a=dnum(j.actualFinish); if(a) maxD=Math.max(maxD,a-start+4); });
-  var W=7, L=(window.innerWidth<600?150:230), rowH=22, H=40+jobs.length*rowH, Wt=L+maxD*W+10;
+  var idx=[]; jobs.forEach(function(j,i){ if(!only||only(j)) idx.push(i); });
+  var W=7, L=(window.innerWidth<600?150:230), rowH=22, T=42, H=T+4+idx.length*rowH, Wt=L+maxD*W+10;
   var x=function(n){ return L+(n-start)*W; };
   var svg='<svg width="'+Wt+'" height="'+H+'" style="font-family:Arial;font-size:11px">';
-  for(var w=0; w*7<maxD; w++){ svg+='<rect x="'+(L+w*7*W)+'" y="0" width="'+(7*W)+'" height="'+H+'" fill="'+(w%2?'#f7f8fb':'#fff')+'"/><text x="'+(L+w*7*W+2)+'" y="14" fill="#667085">W'+(w+1)+'</text>'; }
-  var ce=dnum(s['Contract End']), ne=dnum(s['New End Date']);
-  if(ce) svg+='<line x1="'+(x(ce)+W)+'" x2="'+(x(ce)+W)+'" y1="20" y2="'+H+'" stroke="#f37022" stroke-width="2"/><text x="'+(x(ce)+W+2)+'" y="30" fill="#f37022">Contract end</text>';
-  if(ne&&ne!==ce) svg+='<line x1="'+(x(ne)+W)+'" x2="'+(x(ne)+W)+'" y1="20" y2="'+H+'" stroke="#7030a0" stroke-dasharray="4"/>';
-  jobs.forEach(function(j,i){
-    var y=36+i*rowH, ps=dnum(j.planStart), pf=dnum(j.planFinish), st=j.st;
+  for(var w=0; w*7<maxD; w++){ svg+='<rect x="'+(L+w*7*W)+'" y="0" width="'+(7*W)+'" height="'+H+'" fill="'+(w%2?'#f7f8fb':'#fff')+'"/><text x="'+(L+w*7*W+2)+'" y="12" fill="#1f3864" font-weight="bold">W'+(w+1)+'</text><text x="'+(L+w*7*W+2)+'" y="24" fill="#667085" font-size="10">'+dmon(start+w*7)+'</text>'; }
+  var ce=dnum(s['Contract End']), ne=dnum(s['New End Date']), fc=dnum(d.sm.forecastFinish);
+  if(ce) svg+='<line x1="'+(x(ce)+W)+'" x2="'+(x(ce)+W)+'" y1="28" y2="'+H+'" stroke="#f37022" stroke-width="2"/><text x="'+(x(ce)+W+2)+'" y="38" fill="#f37022">Contract end '+dmon(ce)+'</text>';
+  if(ne&&ne!==ce) svg+='<line x1="'+(x(ne)+W)+'" x2="'+(x(ne)+W)+'" y1="28" y2="'+H+'" stroke="#7030a0" stroke-dasharray="4"/>';
+  if(fc&&fc>(ne||ce||0)) svg+='<line x1="'+(x(fc)+W)+'" x2="'+(x(fc)+W)+'" y1="28" y2="'+H+'" stroke="#c00000" stroke-width="2" stroke-dasharray="6 3"/><text x="'+(x(fc)+W-4)+'" y="50" text-anchor="end" fill="#c00000">Expected finish '+dmon(fc)+'</text>';
+  idx.forEach(function(i,r){
+    var j=jobs[i], y=T+4+r*rowH, ps=dnum(j.planStart), pf=dnum(j.planFinish), st=j.st;
     svg+='<text x="4" y="'+(y+12)+'" fill="#1d2433">'+esc(j.code)+' '+esc(String(j.description).slice(0,(window.innerWidth<600?20:32)))+'</text>';
-    if(st.external){ svg+='<rect x="'+(x(pf)+1)+'" y="'+(y+3)+'" width="10" height="10" transform="rotate(45 '+(x(pf)+6)+' '+(y+8)+')" fill="'+(j.actualFinish?'#2e7d32':'#7030a0')+'"/>'; return; }
-    if(+j.days===0) return;
-    svg+='<rect x="'+x(ps)+'" y="'+(y+2)+'" width="'+((pf-ps+1)*W)+'" height="7" fill="#9dc3e6" rx="2"/>';
-    var as=dnum(j.actualStart);
-    if(as){ var ae=dnum(j.actualFinish)||today; var col=st.delay>0?(st.impact>0?'#c00000':'#b26a00'):'#2e7d32';
-      svg+='<rect x="'+x(as)+'" y="'+(y+10)+'" width="'+(Math.max(1,ae-as+1)*W)+'" height="7" fill="'+col+'" rx="2"/>'; }
-    else if(st.delay>0){ svg+='<text x="'+(x(ps))+'" y="'+(y+18)+'" fill="#c00000" font-size="9">not started</text>'; }
+    if(st.external){ svg+='<rect x="'+(x(pf)+1)+'" y="'+(y+3)+'" width="10" height="10" transform="rotate(45 '+(x(pf)+6)+' '+(y+8)+')" fill="'+(j.actualFinish?'#2e7d32':'#7030a0')+'"/>'; }
+    else if(+j.days!==0){
+      svg+='<rect x="'+x(ps)+'" y="'+(y+2)+'" width="'+((pf-ps+1)*W)+'" height="7" fill="#9dc3e6" rx="2"/>';
+      var as=dnum(j.actualStart), af=dnum(j.actualFinish), ae=af||today;
+      if(as){ var col=st.delay>0?(st.impact>0?'#c00000':'#b26a00'):'#2e7d32';
+        svg+='<rect x="'+x(as)+'" y="'+(y+10)+'" width="'+(Math.max(1,ae-as+1)*W)+'" height="7" fill="'+col+'" rx="2"/>'; }
+      else if(st.delay>0){ svg+='<text x="'+(x(ps)+2)+'" y="'+(y+19)+'" fill="#c00000" font-size="9">not started</text>'; }
+      if(!af && st.delay>0){ var px=Math.max(as?ae+1:ps+st.delay, 1), pe=pf+st.delay; if(pe>=px) svg+='<rect x="'+x(px)+'" y="'+(y+10)+'" width="'+((pe-px+1)*W)+'" height="7" fill="none" stroke="#c00000" stroke-dasharray="3 2" rx="2"/>'; }
+    }
+    svg+='<rect x="0" y="'+y+'" width="'+Wt+'" height="'+rowH+'" fill="transparent" style="cursor:pointer" onclick="barInfo('+i+')"><title>'+esc(j.code+' - '+j.description+' ('+st.status+') - tap for details')+'</title></rect>';
   });
-  if(today>=start) svg+='<line x1="'+(x(today)+W/2)+'" x2="'+(x(today)+W/2)+'" y1="20" y2="'+H+'" stroke="#e1b000" stroke-width="2"/><text x="'+(x(today)+4)+'" y="'+(H-4)+'" fill="#a07c00">Today</text>';
-  svg+='</svg>';
-  return '<div class="card"><div class="legend"><span><i style="background:#9dc3e6"></i>Planned</span><span><i style="background:#2e7d32"></i>Actual - on time</span><span><i style="background:#b26a00"></i>Actual - late (has spare days)</span><span><i style="background:#c00000"></i>Actual - late, delays project</span><span><i style="background:#7030a0"></i>IOCL / LOI Holder item</span><span><i style="background:#e1b000"></i>Today</span></div>'+
-   '<div class="scroll" style="margin-top:8px">'+svg+'</div></div>';
+  if(today>=start) svg+='<line x1="'+(x(today)+W/2)+'" x2="'+(x(today)+W/2)+'" y1="28" y2="'+H+'" stroke="#e1b000" stroke-width="2"/><text x="'+(x(today)+4)+'" y="'+(H-4)+'" fill="#a07c00">Today '+dmon(today)+'</text>';
+  return svg+'</svg>';
+}
+function ganttLegend(){ return '<div class="legend"><span><i style="background:#9dc3e6"></i>Planned</span><span><i style="background:#2e7d32"></i>Actual - on time</span><span><i style="background:#b26a00"></i>Actual - late (has spare days)</span><span><i style="background:#c00000"></i>Actual - late, delays project</span><span><i style="border:1px dashed #c00000;background:#fff"></i>Forecast if not recovered</span><span><i style="background:#7030a0"></i>IOCL / LOI Holder item</span><span><i style="background:#e1b000"></i>Today</span></div>'; }
+function tChart(d){
+  return '<div class="card">'+ganttLegend()+'<div class="muted" style="margin-top:6px">Week headings show the date each week starts (counted from the start date). <b>Tap any activity</b> to see its planned and actual duration and how it affects the project.</div><div class="scroll" style="margin-top:8px">'+ganttSvg(d)+'</div></div>';
+}
+function barInfo(i){
+  var d=ST.site, j=d.jobs[i], st=j.st, today=dnum(ST.boot.today), start=dnum(d.site['Start Date']), sm=d.sm;
+  var ps=dnum(j.planStart), pf=dnum(j.planFinish), as=dnum(j.actualStart), af=dnum(j.actualFinish), ext=st.external, pdur=pf-ps+1;
+  var h='<h2>'+esc(j.code)+' · '+esc(j.description)+'</h2><div class="muted">'+(j.area?esc(j.area)+' · ':'')+'Done by '+esc(j.doneBy)+(+j.spare?' · Spare days '+j.spare:'')+'</div><p><span class="chip '+st.colour+'">'+esc(st.status)+'</span></p>';
+  if(!ext && +j.days===0) return modal(h+'<p class="muted">This item is not needed at this site.</p><div style="margin-top:12px"><button class="btn sec" onclick="closeModal()">Close</button></div>');
+  var rows=[];
+  if(ext){ rows.push(['Due on', dshow(j.planFinish)+' (day '+(pf-start+1)+')']); rows.push(['Received / done', af?dshow(j.actualFinish)+(af>pf?' - <b style="color:var(--red)">'+(af-pf)+' day(s) late</b>':' - on time'):(today>pf?'<b style="color:var(--red)">Not yet. Waiting '+(today-pf)+' day(s) beyond the due date</b>':'Not yet (due in '+(pf-today)+' day(s))')]); }
+  else {
+    rows.push(['Planned', dshow(j.planStart)+' to '+dshow(j.planFinish)+' - <b>'+pdur+' day(s)</b> (project day '+(ps-start+1)+' to '+(pf-start+1)+')']);
+    if(as){ var ae=af||today, adur=ae-as+1;
+      rows.push(['Actual', dshow(j.actualStart)+' to '+(af?dshow(j.actualFinish):'<i>running</i> (today '+dshow(ST.boot.today)+')')+' - <b>'+adur+' day(s)'+(af?'':' so far')+'</b>'+(af?'':', '+(+j.pct||0)+'% done')]);
+      rows.push(['Start', as===ps?'On the planned date':(as>ps?'<b style="color:var(--red)">'+(as-ps)+' day(s) late</b>':(ps-as)+' day(s) early')]);
+      if(af) rows.push(['Time taken vs plan', adur+' vs '+pdur+' planned day(s): '+(adur>pdur?'<b style="color:var(--red)">'+(adur-pdur)+' day(s) more</b>':adur<pdur?(pdur-adur)+' day(s) less':'as planned')]);
+    } else rows.push(['Actual', today>=ps?'<b style="color:var(--red)">Not started. Was due to start '+(today-ps)+' day(s) ago</b>':'Not started yet (due '+dshow(j.planStart)+')']);
+  }
+  h+='<table>'+rows.map(function(r){ return '<tr><td style="width:38%;color:var(--mute)">'+r[0]+'</td><td>'+r[1]+'</td></tr>'; }).join('')+'</table>';
+  var lo=Math.min(ps,as||ps), hi=Math.max(pf,af||(as?today:pf),pf+(st.delay>0&&!af?st.delay:0))+1, span=Math.max(5,hi-lo+1), W=520, X=function(n){ return 10+(W-20)*(n-lo)/span; };
+  var sv='<svg viewBox="0 0 '+W+' 96" style="width:100%;height:auto;margin-top:10px"><text x="10" y="11" font-size="10" fill="#667085">'+dmon(lo)+'</text><text x="'+(W-10)+'" y="11" text-anchor="end" font-size="10" fill="#667085">'+dmon(hi)+'</text>';
+  sv+='<rect x="'+X(ps)+'" y="20" width="'+Math.max(6,(pf-ps+1)*(W-20)/span)+'" height="16" rx="3" fill="#9dc3e6"/><text x="'+(X(ps)+4)+'" y="32" font-size="10" fill="#1f3864">Planned '+pdur+'d</text>';
+  if(!ext&&as){ var ae2=af||today, col=st.delay>0?(st.impact>0?'#c00000':'#b26a00'):'#2e7d32'; sv+='<rect x="'+X(as)+'" y="42" width="'+Math.max(6,(ae2-as+1)*(W-20)/span)+'" height="16" rx="3" fill="'+col+'"/><text x="'+(X(as)+4)+'" y="54" font-size="10" fill="#fff">Actual '+(ae2-as+1)+'d</text>'; }
+  if(!ext&&!af&&st.delay>0){ var px=as?Math.max(today+1,as):ps+st.delay, pe=pf+st.delay; if(pe>=px) sv+='<rect x="'+X(px)+'" y="42" width="'+Math.max(6,(pe-px+1)*(W-20)/span)+'" height="16" rx="3" fill="none" stroke="#c00000" stroke-dasharray="4 3"/><text x="'+(X(px)+4)+'" y="54" font-size="10" fill="#c00000">Forecast</text>'; }
+  if(today>=lo&&today<=hi) sv+='<line x1="'+X(today)+'" x2="'+X(today)+'" y1="16" y2="70" stroke="#e1b000" stroke-width="2"/><text x="'+X(today)+'" y="82" text-anchor="middle" font-size="10" fill="#a07c00">Today</text>';
+  sv+='</svg>'; if(!ext) h+=sv;
+  var succ=dSuccMap(d.jobs), by={}; d.jobs.forEach(function(q){ by[q.code]=q; });
+  var down=dDownOf(succ,j.code).map(function(c){ return by[c]; }).filter(function(q){ return q&&(+q.days>0||q.st.external)&&!/^Done|^Received/.test(q.st.status); });
+  var eff='';
+  if(st.delay>0){
+    eff+='<b>'+st.delay+' day(s) late.</b> ';
+    eff+= st.impact>0 ? '<b style="color:var(--red)">This activity alone pushes the project finish by '+st.impact+' day(s)</b> (overall project is '+sm.slip+' day(s) behind; expected finish '+dshow(sm.forecastFinish)+(sm.beyondEnd>0?', '+sm.beyondEnd+' day(s) after the last date':'')+').' : 'It is being absorbed by '+(+j.spare||0)+' spare day(s), so the finish date is not affected yet.';
+    if(down.length) eff+='<div style="margin-top:6px">Waiting behind it: '+down.slice(0,8).map(function(q){ var p=Math.max(0,st.delay-(+q.spare||0)); return '<b>'+esc(q.code)+'</b> '+esc(String(q.description).slice(0,28))+(p>0?' <span style="color:var(--red)">(+'+p+'d)</span>':''); }).join('; ')+(down.length>8?' and '+(down.length-8)+' more':'')+'.</div>';
+  } else eff='No delay. '+(af?'Completed.':'Running as planned.');
+  h+='<div class="card" style="margin:10px 0 0;border-left:5px solid '+(st.impact>0?'var(--red)':st.delay>0?'var(--amber)':'var(--green)')+'"><b>Effect on the project</b><div style="margin-top:4px">'+eff+'</div></div>';
+  if(j.delayReason||j.delayAnalysis) h+='<div class="muted" style="margin-top:8px"><b>Reason for delay:</b> '+esc(j.delayReason||'-')+(j.delayAnalysis?'<br>'+esc(j.delayAnalysis):'')+'</div>';
+  h+='<div style="margin-top:12px"><button class="btn sec" onclick="closeModal()">Close</button>'+(can('update')?' <button class="btn" onclick="closeModal();editJob('+i+')">Update this work</button>':'')+'</div>';
+  modal(h);
 }
 
 /* ---- hindrances ---- */

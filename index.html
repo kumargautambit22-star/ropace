@@ -259,7 +259,7 @@ function editJob(i){
       '<div><label>Actual finish date</label><input type="date" id="jaf" value="'+esc(j.actualFinish||'')+'"'+(ro?' disabled':'')+'></div></div>'+
       '<div class="row"><div><label>% work done</label><input type="number" min="0" max="100" id="jpc" value="'+(j.pct||0)+'"'+(ro?' disabled':'')+'></div>'+
       '<div><label>Expected finish date (if still going on)</label><input type="date" id="jef" value="'+esc(j.expectedFinish||'')+'"'+(ro?' disabled':'')+'></div></div>'+
-      '<label>Reason for delay '+(st.delay>0?'<b style="color:var(--red)">(required - work is late)</b>':'(if any)')+'</label><select id="jdr"'+(ro?' disabled':'')+'><option value="">-- select --</option>'+
+      '<label>Reason for delay '+(st.delay>0&&!can('officer')?'<b style="color:var(--red)">(required - work is late)</b>':'(optional for IOCL officers)')+'</label><select id="jdr"'+(ro?' disabled':'')+'><option value="">-- select --</option>'+
       reasons.map(function(r){ return '<option'+(r===j.delayReason?' selected':'')+'>'+esc(r)+'</option>'; }).join('')+'</select>'+
       '<label>Delay analysis - what exactly caused the delay and what is being done</label><textarea id="jda"'+(ro?' disabled':'')+'>'+esc(j.delayAnalysis||'')+'</textarea>';
   }

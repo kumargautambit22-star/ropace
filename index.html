@@ -487,7 +487,7 @@ function tPlan(d){
   var s=d.site, locked=String(s['Plan Locked']).toUpperCase()==='YES', isTpi=role()==='TPI', isOff=can('officer'), isCon=role()==='CONTRACTOR';
   var vs=d.planVersions||[], act=vs.filter(function(v){ return v.status==='Active'; })[0];
   var lim={contract:+s['Contract Days']||105}; lim.min=lim.contract-7; var tg=+s['Plan Target Days']; lim.target=(tg>=lim.min&&tg<=lim.contract)?tg:lim.min;
-  var h='', next=String.fromCharCode(65+Math.min(vs.length,25));
+  PLREB=false; var h='', next=String.fromCharCode(65+Math.min(vs.length,25));
   var pend=(d.proposals||[]).filter(function(p){ return p.status==='Pending'; }), hist=(d.proposals||[]).filter(function(p){ return p.status!=='Pending'; });
   if(vs.length){
     h+='<div class="card"><h3 style="margin-top:0">Plan versions</h3><div class="muted">Plan A is the master plan. If a plan fails, a new plan (B, C ...) is made after discussion with the contractor and the contractor is informed at once. Delay is always measured against the master plan and the contract.</div>';
@@ -533,7 +533,7 @@ function tPlan(d){
       '<div class="scroll"><table id="pt"><tr><th>No.</th><th>Work</th><th>Days</th><th>Starts after</th><th>Needed by day</th><th>Share %</th><th>Clashes with</th><th>Plan</th></tr>'+
       d.jobs.map(function(j){ var dis=j.actualFinish?' disabled title="Finished - cannot change"':''; return '<tr data-c="'+esc(j.code)+'"><td>'+esc(j.code)+'</td><td>'+esc(j.description)+'</td><td><input style="width:60px" data-k="days" type="number" min="0" value="'+j.days+'" oninput="planSoon()"'+dis+'></td><td><input style="width:120px" data-k="after" value="'+esc(j.after||'')+'" oninput="planSoon()"'+dis+'></td><td><input style="width:60px" data-k="neededBy" value="'+esc(j.neededBy===undefined?'':j.neededBy)+'" oninput="planSoon()"'+dis+'></td><td><input style="width:60px" data-k="share" type="number" step="0.01" value="'+j.share+'"'+dis+'></td><td><input style="width:90px" data-k="clash" value="'+esc(j.clash||'')+'" oninput="planSoon()"'+dis+'></td><td class="muted pl" data-p="'+esc(j.code)+'">'+dshow(j.planStart)+' - '+dshow(j.planFinish)+'</td></tr>'; }).join('')+
       '</table></div><label>'+(mode==='draft'?'Reason for change (agreed with contractor)':'Reason / contractor\'s commitment (what was agreed in the joint discussion)')+'</label><input id="prs" placeholder="e.g. slab 3 days more, plaster 3 days less - agreed on joint meeting"><div id="pe" class="err"></div>'+
-      '<div class="row" style="margin-top:10px"><button class="btn sec" onclick="planPreview(true)">Auto-fit to limit</button>'+
+      '<div class="row" style="margin-top:10px"><button class="btn sec" onclick="planPreview(true)">Auto-fit to limit</button>'+(mode!=='draft'?'<button class="btn sec" onclick="suggestPlan()">Re-plan from actual progress</button>':'')+
       (mode==='propose'?'<button class="btn" onclick="proposePlan()">Send revised plan for approval</button>':mode==='revise'?'<button class="btn" onclick="revisePlan()">Adopt as Plan '+next+' and inform contractor</button>':'<button class="btn" onclick="savePlan()">Save plan changes</button><button class="btn" onclick="lockPlan(true)">Approve &amp; lock plan (Plan A)</button>')+
       ((mode==='revise'&&!(act&&act.beyond))?'<button class="btn sec" onclick="lockPlan(false)">Unlock plan (to correct a mistake)</button>':'')+'</div>'+
       (mode==='draft'?'<div class="muted" style="margin-top:6px">After the plan is approved and locked it becomes the master Plan A, the contractor is informed at once, and reminders start.</div>':'');
@@ -563,8 +563,18 @@ function reviewPlan(pid,action){
   modal('<h2>'+(action==='approve'?'Approve this revised bar chart?':'Reject this revised bar chart')+'</h2><div class="muted">'+(action==='approve'?'It becomes the running plan, all planned dates change and the contractor is informed at once.':'The running plan stays as it is.')+'</div><label>Remark'+(action==='reject'?' (reason is required)':' (optional)')+'</label><textarea id="rpr" rows="3"></textarea><div id="rpe" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" id="rpb">'+(action==='approve'?'Approve and apply':'Reject')+'</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
   $('rpb').onclick=function(){ api('apiReviewPlan',ST.token,ST.siteId,pid,action,$('rpr').value).then(function(d){ closeModal(); refreshSite(d); toast(action==='approve'?'Plan updated':'Proposal rejected'); }).catch(function(e){ showErr('rpe',e); }); };
 }
-var PLT=null;
-function planRows(){ var rows=[]; document.querySelectorAll('#pt tr[data-c]').forEach(function(tr){ var o={code:tr.getAttribute('data-c')}; tr.querySelectorAll('[data-k]').forEach(function(i){ o[i.getAttribute('data-k')]=i.value; }); rows.push(o); }); return rows; }
+var PLT=null, PLREB=false;
+function planRows(){ var rows=[]; document.querySelectorAll('#pt tr[data-c]').forEach(function(tr){ var o={code:tr.getAttribute('data-c')}; tr.querySelectorAll('[data-k]').forEach(function(i){ o[i.getAttribute('data-k')]=i.value; }); if(PLREB) o.rebase=true; rows.push(o); }); return rows; }
+function suggestPlan(){
+  var st=$('pst'); if(st) st.innerHTML='<span class="muted">Working out the plan from actual progress...</span>';
+  api('apiSuggestPlan',ST.token,ST.siteId).then(function(p){
+    p.rows.forEach(function(r){ var tr=document.querySelector('#pt tr[data-c="'+r.code+'"]'); if(!tr) return; tr.querySelector('[data-k="days"]').value=r.days; tr.querySelector('[data-k="neededBy"]').value=r.neededBy; tr.style.background=r.changed?'#fff7e0':''; });
+    PLREB=true; var b=$('pbs');
+    if(b){ if(p.beyond){ b.value='out'; planBasis(); $('pcd').value=p.finishDate; } else { b.value='in'; planBasis(); $('ptar').value=p.target; } }
+    var rs=$('prs'); if(rs&&!rs.value) rs.value='Re-planned from actual progress on '+dshow(p.today)+'. '+p.summary;
+    planPreview(false); toast('Plan worked out from actual progress. Please check, then adopt it.');
+  }).catch(function(e){ showErr('pe',e); if($('pst')) $('pst').innerHTML=''; });
+}
 function planSoon(){ clearTimeout(PLT); PLT=setTimeout(function(){ planPreview(false); },600); }
 function planPreview(auto){
   if(!$('pt')) return; var t;

@@ -171,7 +171,9 @@ function renderHome(){
   if(!shown.length) h+='<div class="card muted">No sites to show.'+(can('addsite')?' Click "+ New site" to add one.':'')+'</div>';
   shown.forEach(function(x){
     var sm=x.sm;
-    var stBadge=x.status==='Pending Approval'?'<div style="margin-top:4px"><span class="chip amber">Waiting for IOCL approval</span> <span class="muted">added by '+esc(x.createdBy||'-')+'</span></div>':x.status==='Rejected'?'<div style="margin-top:4px"><span class="chip red">Rejected</span></div>':'';
+    var verBadge=(x.planName&&x.planName!=='A')?'<div style="margin-top:4px"><span class="chip blue">Running Plan '+esc(x.planName)+'</span></div>':'';
+    var planBadge=(x.planPending&&can('officer'))?'<div style="margin-top:4px"><span class="chip amber">'+x.planPending+' revised plan waiting for approval</span></div>':(x.planPending?'<div style="margin-top:4px"><span class="chip amber">Revised plan sent for approval</span></div>':'');
+    var stBadge=verBadge+planBadge+(x.status==='Pending Approval'?'<div style="margin-top:4px"><span class="chip amber">Waiting for IOCL approval</span> <span class="muted">added by '+esc(x.createdBy||'-')+'</span></div>':x.status==='Rejected'?'<div style="margin-top:4px"><span class="chip red">Rejected</span></div>':'');
     var stBtn=(x.status==='Pending Approval'&&can('officer'))?'<div style="margin-top:8px" onclick="event.stopPropagation()"><button class="btn small" onclick="reviewSite(\''+esc(x.id)+'\',\'approve\')">Accept site</button> <button class="btn small sec" onclick="reviewSite(\''+esc(x.id)+'\',\'reject\')">Reject</button></div>':'';
     h+='<div class="card site" onclick="openSite(\''+esc(x.id)+'\')"><div class="top"><div><div class="name">'+esc(x.roName)+'</div>'+stBadge+stBtn+
        '<div class="muted">'+esc(x.id)+' · '+esc(x.contractor||'-')+' · '+esc(x.location||'')+'</div></div><span class="chip '+sm.health+'">'+sm.health+'</span></div>'+
@@ -187,12 +189,13 @@ function kpi(v,l){ return '<div class="kpi"><div class="v">'+v+'</div><div class
 /* ============ one site ============ */
 function openSite(id){ ST.siteId=id; ST.tab=ST.tab||'summary'; api('apiSite',ST.token,id).then(function(d){ ST.site=d; renderSite(); }).catch(function(e){ toast(e.message); }); }
 function refreshSite(d){ ST.site=d; renderSite(); }
-var TABS=[['summary','Summary'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['admin','Site settings']];
+var TABS=[['summary','Summary'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['plan','Plan'],['admin','Site settings']];
 function renderSite(){
   var d=ST.site, s=d.site;
   var banner=s['Status']==='Pending Approval'?'<div class="card" style="border-left:5px solid var(--amber)"><b>This site is waiting for IOCL approval.</b> (added by '+esc(s['Created By']||'-')+')'+(can('officer')?'<div style="margin-top:8px"><button class="btn small" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'approve\')">Accept site</button> <button class="btn small sec" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'reject\')">Reject</button></div>':'<div class="muted">Updates can start after an IOCL officer accepts it.</div>')+'</div>':s['Status']==='Rejected'?'<div class="card" style="border-left:5px solid var(--red)"><b>This site was rejected.</b> See the History tab for the reason.</div>':'';
-  var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]!=='admin'||can('officer'); }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
-  var body={summary:tSummary,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,admin:tAdmin}[ST.tab]||tSummary;
+  banner+=planBanner(d);
+  var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]==='admin'?can('officer'):true; }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
+  var body={summary:tSummary,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,plan:tPlan,admin:tAdmin}[ST.tab]||tSummary;
   shell(s['RO Name'], s['Site ID']+' · '+(s['Contractor Name']||''), banner+tabs+body(d), 'home()');
 }
 function tSummary(d){
@@ -434,7 +437,7 @@ var FIELDS=[['RO Name','text'],['Location','text'],['Divisional Office','text'],
  ['Start Date Override','date'],['Contract Days','number'],['Engineer-in-Charge Email','email'],['TPI Email','text'],['Officer Emails','text'],['Work Done Value','number']];
 var HINTS={'PO Date':'PO / commencement order date. Start date = this + 10 days','Handover Date':'Fill only if site was handed over earlier','Start Date Override':'Fill only if Engineer-in-Charge fixes a different start date',
  'TPI Email':'More than one: separate by comma','Officer Emails':'SREH, SRH etc. - get copy of serious reminders','Work Done Value':'Value of work done till last RA bill (for price discount estimate)'};
-var STD=['Site ID','RO Name','Location','Divisional Office','Tender No','Vendor Code','Contractor Name','Contractor Email','Contractor WhatsApp','PO No','PO Amount','PO Date','Handover Date','Start Date','Contract Days','Contract End','Approved Extra Days','New End Date','Plan Finish','Engineer-in-Charge Email','TPI Email','Officer Emails','Work Done Value','Status','Plan Locked','Created By','Created At'];
+var STD=['Site ID','RO Name','Location','Divisional Office','Tender No','Vendor Code','Contractor Name','Contractor Email','Contractor WhatsApp','PO No','PO Amount','PO Date','Handover Date','Start Date','Contract Days','Contract End','Approved Extra Days','New End Date','Plan Finish','Engineer-in-Charge Email','TPI Email','Officer Emails','Work Done Value','Status','Plan Locked','Plan Target Days','Created By','Created At'];
 function siteForm(s){
   s=s||{};
   var extra=(ST.boot.siteFields||[]).filter(function(f){ return STD.indexOf(f)<0; });
@@ -464,13 +467,6 @@ function tAdmin(d){
   Object.keys(d.extra||{}).forEach(function(k){ h+='<div class="muted">'+esc(k)+': '+esc(d.extra[k])+'</div>'; });
   h+='<div style="margin-top:8px"><button class="btn sec" onclick="editSite(ST.site.site)">Edit details</button></div></div>';
   if(can('admin')){
-    h+='<div class="card"><h3 style="margin-top:0">Plan (bar chart) - '+(locked?'<span style="color:var(--green)">APPROVED & LOCKED</span>':'<span style="color:var(--amber)">NOT LOCKED</span>')+'</h3>';
-    if(!locked){
-      h+='<div class="muted">Change days, "starts after" (e.g. T5+7, F1) or share %. Then Save. When the contractor\'s bar chart is agreed, click "Approve & lock plan". Reminders start only after locking.</div><div class="scroll"><table id="pt"><tr><th>No.</th><th>Work</th><th>Days</th><th>Starts after</th><th>Needed by day</th><th>Share %</th><th>Plan</th></tr>'+
-        d.jobs.map(function(j){ return '<tr data-c="'+esc(j.code)+'"><td>'+esc(j.code)+'</td><td>'+esc(j.description)+'</td><td><input style="width:60px" data-k="days" type="number" value="'+j.days+'"></td><td><input style="width:120px" data-k="after" value="'+esc(j.after||'')+'"></td><td><input style="width:60px" data-k="neededBy" value="'+esc(j.neededBy===undefined?'':j.neededBy)+'"></td><td><input style="width:60px" data-k="share" type="number" step="0.01" value="'+j.share+'"></td><td class="muted">'+dshow(j.planStart)+' - '+dshow(j.planFinish)+'</td></tr>'; }).join('')+
-        '</table></div><div id="pe" class="err"></div><div class="row" style="margin-top:10px"><button class="btn sec" onclick="savePlan()">Save plan changes</button><button class="btn" onclick="lockPlan(true)">Approve & lock plan</button></div>';
-    } else h+='<div class="muted">Plan is locked. Planned dates cannot change. To revise (e.g. after approved extension), unlock with a reason - it is recorded in history.</div><div style="margin-top:8px"><button class="btn sec" onclick="lockPlan(false)">Unlock plan</button></div>';
-    h+='</div>';
     h+='<div class="card"><h3 style="margin-top:0">Time extension</h3><div class="muted">Approved hindrance days (overlaps counted once): <b>'+d.sm.hindranceDays+'</b>. Present extension: <b>'+(s['Approved Extra Days']||0)+' days</b>, last date <b>'+dshow(s['New End Date'])+'</b>.</div>'+
        '<div class="row"><div><label>Approved extra days</label><input id="xd" type="number" min="0" value="'+(s['Approved Extra Days']||0)+'"></div><div style="flex:2"><label>Approval reference / remark</label><input id="xr"></div></div><div id="xe" class="err"></div>'+
        '<div style="margin-top:10px"><button class="btn" onclick="saveExtra()">Save extension</button></div></div>';
@@ -478,9 +474,114 @@ function tAdmin(d){
   }
   return h;
 }
+function dd(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/864e5); }
+function planBanner(d){
+  var vs=d.planVersions||[], act=vs.filter(function(v){ return v.status==='Active'; })[0], A=vs[0];
+  if(!act||act.plan==='A') return '';
+  var diff=dd(A.finish,act.finish), s=d.site;
+  return '<div class="card" style="border-left:5px solid var(--blue)"><b>Running Plan '+esc(act.plan)+'</b> - finish '+dshow(act.finish)+'. Master Plan A finish was '+dshow(A.finish)+(diff>0?' (<b style="color:var(--red)">'+diff+' days later</b> than master)':diff<0?' ('+(-diff)+' days earlier)':'')+'. '+
+    (act.beyond?'<b>Beyond the scheduled completion ('+dshow(s['Contract End'])+')</b> - contractor committed to '+dshow(act.committed)+'. ':'Within the scheduled completion ('+dshow(s['Contract End'])+'). ')+
+    '<span class="muted">Delay against the master plan and contract still counts; work status below is against the running plan.</span></div>';
+}
+function tPlan(d){
+  var s=d.site, locked=String(s['Plan Locked']).toUpperCase()==='YES', isTpi=role()==='TPI', isOff=can('officer'), isCon=role()==='CONTRACTOR';
+  var vs=d.planVersions||[], act=vs.filter(function(v){ return v.status==='Active'; })[0];
+  var lim={contract:+s['Contract Days']||105}; lim.min=lim.contract-7; var tg=+s['Plan Target Days']; lim.target=(tg>=lim.min&&tg<=lim.contract)?tg:lim.min;
+  var h='', next=String.fromCharCode(65+Math.min(vs.length,25));
+  var pend=(d.proposals||[]).filter(function(p){ return p.status==='Pending'; }), hist=(d.proposals||[]).filter(function(p){ return p.status!=='Pending'; });
+  if(vs.length){
+    h+='<div class="card"><h3 style="margin-top:0">Plan versions</h3><div class="muted">Plan A is the master plan. If a plan fails, a new plan (B, C ...) is made after discussion with the contractor and the contractor is informed at once. Delay is always measured against the master plan and the contract.</div>';
+    vs.slice().reverse().forEach(function(v){
+      var diff=vs[0]?dd(vs[0].finish,v.finish):0, isAct=v.status==='Active';
+      var ackTxt=v.ack==='Acknowledged'?'<span style="color:var(--green)">Acknowledged by '+esc(v.ackBy)+' on '+esc(String(v.ackAt).slice(0,10))+(v.ackRemark?' - '+esc(v.ackRemark):'')+'</span>':
+        (v.informed?'<span style="color:var(--amber)">Contractor informed ('+esc(String(v.informed).slice(0,16))+') - not yet acknowledged. The plan stands as prepared after discussion.</span>':'<span class="muted">Contractor not yet informed</span>');
+      h+='<div style="border-top:1px solid #e3e7ee;padding:8px 0"><div class="row"><div><b>Plan '+esc(v.plan)+'</b> <span class="chip '+(isAct?'green':'grey')+'">'+(isAct?'Running':'Replaced')+'</span> <span class="chip '+(v.beyond?'red':'blue')+'">'+(v.beyond?'Beyond scheduled completion':'Within scheduled completion')+'</span></div>'+
+        '<div class="muted" style="text-align:right">'+esc(String(v.at).slice(0,10))+' - '+esc(v.by)+'</div></div>'+
+        '<div>Finish <b>'+dshow(v.finish)+'</b> ('+esc(v.planDays)+' days)'+(v.plan!=='A'?(diff>0?' - <b style="color:var(--red)">'+diff+' days later than master</b>':diff<0?' - '+(-diff)+' days earlier than master':' - same as master'):'')+(v.beyond?' - contractor committed to <b>'+dshow(v.committed)+'</b>':'')+'</div>'+
+        '<div class="muted">'+esc(v.reason||'')+'</div><div style="margin-top:4px">'+ackTxt+'</div>'+
+        (isAct&&v.ack!=='Acknowledged'&&(isCon||isOff)?'<div style="margin-top:6px"><button class="btn small" onclick="ackPlan(\''+esc(v.id)+'\')">'+(isCon?'Acknowledge this plan':'Record contractor acknowledgement')+'</button></div>':'')+
+        (isAct&&isOff?'<div style="margin-top:6px"><button class="btn wa small" onclick="waPlan()">WhatsApp to contractor</button> <button class="btn sec small" onclick="waPlanCopy()">Copy text</button></div>':'')+'</div>';
+    });
+    h+='</div>';
+    if(act&&act.plan!=='A'&&vs[0].rows&&act.rows){
+      var ma={}; vs[0].rows.forEach(function(r){ ma[r.code]=r; }); var dsc={}; d.jobs.forEach(function(j){ dsc[j.code]=j.description; });
+      var rows=act.rows.filter(function(r){ return ma[r.code]&&dd(ma[r.code].finish,r.finish)!==0; });
+      if(rows.length) h+='<div class="card"><h3 style="margin-top:0">Plan '+esc(act.plan)+' against master Plan A ('+rows.length+' activities changed)</h3><div class="scroll"><table><tr><th>No.</th><th>Work</th><th>Plan A finish</th><th>Plan '+esc(act.plan)+' finish</th><th>Difference</th></tr>'+
+        rows.map(function(r){ var df=dd(ma[r.code].finish,r.finish); return '<tr><td>'+esc(r.code)+'</td><td>'+esc(dsc[r.code]||'')+'</td><td>'+dshow(ma[r.code].finish)+'</td><td>'+dshow(r.finish)+'</td><td style="color:'+(df>0?'var(--red)':'var(--green)')+'"><b>'+(df>0?'+':'')+df+' days</b></td></tr>'; }).join('')+'</table></div></div>';
+    }
+  }
+  pend.forEach(function(p){
+    h+='<div class="card" style="border-left:5px solid var(--amber)"><b>Revised bar chart waiting for approval</b> <span class="muted">- proposed by '+esc(p.by)+' on '+esc(String(p.at).slice(0,16))+'</span>'+
+      '<div style="margin-top:6px">Plan length: <b>'+esc(p.planDays)+' days</b> (limit '+esc(p.target)+')'+(p.beyond?' - <b style="color:var(--red)">beyond the scheduled completion</b>':'')+'</div><div class="muted" style="margin-top:4px">Changes: '+esc(p.summary)+'</div><div style="margin-top:4px">Reason: '+esc(p.reason)+'</div>'+
+      (isOff?'<div style="margin-top:8px"><button class="btn small" onclick="reviewPlan(\''+esc(p.id)+'\',\'approve\')">Approve'+(locked?' as Plan '+next:'')+'</button> <button class="btn small sec" onclick="reviewPlan(\''+esc(p.id)+'\',\'reject\')">Reject</button></div>':'<div class="muted" style="margin-top:6px">Waiting for IOCL officer / admin.</div>')+'</div>';
+  });
+  if(isCon){ return h||'<div class="card muted">The bar chart has not been finalised yet.</div>'; }
+  var mode=isTpi?'propose':(isOff&&locked?'revise':(isOff?'draft':'view'));
+  h+='<div class="card"><h3 style="margin-top:0">'+(mode==='revise'?'Revise the plan - new Plan '+next:mode==='propose'?'Propose a revised plan':'Plan (bar chart)')+' - '+(locked?'<span style="color:var(--green)">LOCKED</span>':'<span style="color:var(--amber)">NOT LOCKED</span>')+'</h3>';
+  if(mode==='view'||(mode==='draft'&&false)){ h+='<div class="muted">No access.</div>'; }
+  else {
+    h+='<div class="muted">Contract period: <b>'+lim.contract+' days</b> (scheduled completion '+dshow(s['Contract End'])+'). The IOCL plan is made for <b>'+lim.min+' days</b>; after discussion the contractor may be given up to '+lim.contract+' days. '+
+      'Change the days of any activity - all following activities move automatically. "Clashes with": put Work Nos. that hinder this work at site (e.g. excavated earth); you get a warning if they run together. Activities already finished cannot be changed.'+
+      (mode==='propose'?' <b>Your revised plan goes to the IOCL officer / admin for approval. The running plan changes only after they approve.</b>':'')+
+      (mode==='revise'?' <b>When you save, the old plan is kept as history, Plan '+next+' becomes the running plan and the contractor is informed at once (e-mail), with a WhatsApp text ready.</b>':'')+'</div>';
+    if(mode!=='draft'){
+      h+='<div class="row" style="margin-top:8px;align-items:flex-end"><div style="max-width:320px"><label>Plan completes</label><select id="pbs" onchange="planBasis()"><option value="in">Within the scheduled completion (day '+lim.min+' to '+lim.contract+')</option><option value="out">BEYOND the scheduled completion (contractor commitment)</option></select></div>'+
+        '<div id="pcw" style="display:none;max-width:220px"><label>Contractor commits to finish by</label><input id="pcd" type="date" min="'+esc(s['Contract End'])+'" onchange="planSoon()"></div></div>';
+    }
+    h+='<div class="row" style="margin:10px 0;align-items:flex-end"><div id="ptw" style="max-width:200px"><label>Bar chart limit (days, '+lim.min+' to '+lim.contract+')</label><input id="ptar" type="number" min="'+lim.min+'" max="'+lim.contract+'" value="'+(act&&act.limit&&+act.limit<=lim.contract?act.limit:lim.target)+'" oninput="planSoon()"></div>'+
+      '<div style="flex:2"><div id="pst" class="muted">Checking...</div></div></div><div id="pcl"></div>'+
+      '<div class="scroll"><table id="pt"><tr><th>No.</th><th>Work</th><th>Days</th><th>Starts after</th><th>Needed by day</th><th>Share %</th><th>Clashes with</th><th>Plan</th></tr>'+
+      d.jobs.map(function(j){ var dis=j.actualFinish?' disabled title="Finished - cannot change"':''; return '<tr data-c="'+esc(j.code)+'"><td>'+esc(j.code)+'</td><td>'+esc(j.description)+'</td><td><input style="width:60px" data-k="days" type="number" min="0" value="'+j.days+'" oninput="planSoon()"'+dis+'></td><td><input style="width:120px" data-k="after" value="'+esc(j.after||'')+'" oninput="planSoon()"'+dis+'></td><td><input style="width:60px" data-k="neededBy" value="'+esc(j.neededBy===undefined?'':j.neededBy)+'" oninput="planSoon()"'+dis+'></td><td><input style="width:60px" data-k="share" type="number" step="0.01" value="'+j.share+'"'+dis+'></td><td><input style="width:90px" data-k="clash" value="'+esc(j.clash||'')+'" oninput="planSoon()"'+dis+'></td><td class="muted pl" data-p="'+esc(j.code)+'">'+dshow(j.planStart)+' - '+dshow(j.planFinish)+'</td></tr>'; }).join('')+
+      '</table></div><label>'+(mode==='draft'?'Reason for change (agreed with contractor)':'Reason / contractor\'s commitment (what was agreed in the joint discussion)')+'</label><input id="prs" placeholder="e.g. slab 3 days more, plaster 3 days less - agreed on joint meeting"><div id="pe" class="err"></div>'+
+      '<div class="row" style="margin-top:10px"><button class="btn sec" onclick="planPreview(true)">Auto-fit to limit</button>'+
+      (mode==='propose'?'<button class="btn" onclick="proposePlan()">Send revised plan for approval</button>':mode==='revise'?'<button class="btn" onclick="revisePlan()">Adopt as Plan '+next+' and inform contractor</button>':'<button class="btn" onclick="savePlan()">Save plan changes</button><button class="btn" onclick="lockPlan(true)">Approve &amp; lock plan (Plan A)</button>')+
+      ((mode==='revise'&&!(act&&act.beyond))?'<button class="btn sec" onclick="lockPlan(false)">Unlock plan (to correct a mistake)</button>':'')+'</div>'+
+      (mode==='draft'?'<div class="muted" style="margin-top:6px">After the plan is approved and locked it becomes the master Plan A, the contractor is informed at once, and reminders start.</div>':'');
+    setTimeout(function(){ if($('pt')) planPreview(false); },60);
+  }
+  h+='</div>';
+  if(hist.length){ h+='<div class="card"><h3 style="margin-top:0">Earlier proposals</h3>'+hist.map(function(p){ return '<div class="muted" style="margin-bottom:6px"><b>'+esc(p.status)+'</b> - proposed by '+esc(p.by)+(p.reviewedBy?', decided by '+esc(p.reviewedBy):'')+'<br>'+esc(p.summary)+(p.remark?'<br>Remark: '+esc(p.remark):'')+'</div>'; }).join('')+'</div>'; }
+  return h;
+}
+function planTarget(){
+  var s=ST.site.site, b=$('pbs'), beyond=!!(b&&b.value==='out');
+  if(beyond){ var dv=$('pcd').value; if(!dv) throw new Error('Select the date by which the contractor commits to finish.'); return {days:dd(s['Start Date'],dv)+1, beyond:true}; }
+  return {days:+$('ptar').value, beyond:false};
+}
+function planBasis(){ var o=$('pbs').value==='out'; $('pcw').style.display=o?'':'none'; $('ptw').style.display=o?'none':''; planSoon(); }
+function waPlan(){ var a=(ST.site.planVersions||[]).filter(function(v){ return v.status==='Active'; })[0]; if(a&&a.wa) window.open('https://wa.me/?text='+encodeURIComponent(a.wa),'_blank'); }
+function waPlanCopy(){ var a=(ST.site.planVersions||[]).filter(function(v){ return v.status==='Active'; })[0]; if(!a) return; if(navigator.clipboard) navigator.clipboard.writeText(a.wa).then(function(){ toast('Copied'); },function(){ modal('<div class="pre">'+esc(a.wa)+'</div>'); }); else modal('<div class="pre">'+esc(a.wa)+'</div>'); }
+function ackPlan(vid){
+  modal('<h2>Acknowledge this plan</h2><div class="muted">This records that the contractor has seen and accepts the plan. (If not acknowledged, the plan still stands as prepared after discussion.)</div><label>Remark (optional)</label><textarea id="akr" rows="3"></textarea><div id="ake" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" id="akb">Acknowledge</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+  $('akb').onclick=function(){ api('apiAckPlan',ST.token,ST.siteId,vid,$('akr').value).then(function(d){ closeModal(); refreshSite(d); toast('Acknowledged'); }).catch(function(e){ showErr('ake',e); }); };
+}
+function proposePlan(){ var t; try{ t=planTarget(); }catch(e){ return showErr('pe',e); }
+  api('apiProposePlan',ST.token,ST.siteId,planRows(),t.days,$('prs').value,t.beyond).then(function(d){ refreshSite(d); toast('Revised plan sent for approval'); }).catch(function(e){ showErr('pe',e); }); }
+function revisePlan(){ var t; try{ t=planTarget(); }catch(e){ return showErr('pe',e); }
+  api('apiRevisePlan',ST.token,ST.siteId,planRows(),t.days,$('prs').value,t.beyond).then(function(d){ refreshSite(d); toast('New plan adopted. Contractor informed.'); }).catch(function(e){ showErr('pe',e); }); }
+function reviewPlan(pid,action){
+  modal('<h2>'+(action==='approve'?'Approve this revised bar chart?':'Reject this revised bar chart')+'</h2><div class="muted">'+(action==='approve'?'It becomes the running plan, all planned dates change and the contractor is informed at once.':'The running plan stays as it is.')+'</div><label>Remark'+(action==='reject'?' (reason is required)':' (optional)')+'</label><textarea id="rpr" rows="3"></textarea><div id="rpe" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" id="rpb">'+(action==='approve'?'Approve and apply':'Reject')+'</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+  $('rpb').onclick=function(){ api('apiReviewPlan',ST.token,ST.siteId,pid,action,$('rpr').value).then(function(d){ closeModal(); refreshSite(d); toast(action==='approve'?'Plan updated':'Proposal rejected'); }).catch(function(e){ showErr('rpe',e); }); };
+}
+var PLT=null;
+function planRows(){ var rows=[]; document.querySelectorAll('#pt tr[data-c]').forEach(function(tr){ var o={code:tr.getAttribute('data-c')}; tr.querySelectorAll('[data-k]').forEach(function(i){ o[i.getAttribute('data-k')]=i.value; }); rows.push(o); }); return rows; }
+function planSoon(){ clearTimeout(PLT); PLT=setTimeout(function(){ planPreview(false); },600); }
+function planPreview(auto){
+  if(!$('pt')) return; var t;
+  try{ t=planTarget(); }catch(e){ $('pst').innerHTML='<span class="muted">'+esc(e.message)+'</span>'; return; }
+  api('apiPlanPreview',ST.token,ST.siteId,planRows(),t.days,!!auto,t.beyond).then(function(p){
+    if(auto){ p.rows.forEach(function(r){ var tr=document.querySelector('#pt tr[data-c="'+r.code+'"]'); if(tr) tr.querySelector('[data-k="days"]').value=r.days; }); }
+    p.rows.forEach(function(r){ var td=document.querySelector('#pt td[data-p="'+r.code+'"]'); if(td){ td.textContent=dshow(r.planStart)+' - '+dshow(r.planFinish); td.style.fontWeight=r.critical?'bold':''; td.style.color=r.critical?'var(--red)':''; } });
+    var msg=p.over>0?'<span style="color:var(--red)"><b>Bar chart is '+p.planDays+' days - '+p.over+' day(s) more than the limit of '+p.target+'.</b> Shorten some activities or press Auto-fit.</span>':
+      '<span style="color:var(--green)"><b>Bar chart is '+p.planDays+' days</b> - within the limit of '+p.target+' days ('+p.spareDays+' spare). Contract: '+p.contract+' days.</span>';
+    if(auto&&!p.fitOk) msg='<span style="color:var(--red)"><b>Cannot shorten further automatically ('+p.planDays+' days). Please reduce some activities by hand or raise the limit.</b></span>';
+    $('pst').innerHTML=msg+' <span class="muted">Red dates = critical (cannot slip).</span>';
+    $('pcl').innerHTML=(p.clashes||[]).map(function(x){ return '<div class="card" style="border-left:5px solid var(--amber);padding:8px">Clash warning: '+esc(x)+'</div>'; }).join('')+(p.practical||[]).map(function(x){ return '<div class="card" style="border-left:5px solid var(--amber);padding:8px">Practical check: '+esc(x)+'</div>'; }).join('');
+    $('pe').textContent='';
+  }).catch(function(e){ $('pst').innerHTML='<span style="color:var(--red)">'+esc(e.message||e)+'</span>'; });
+}
 function savePlan(){
-  var rows=[]; document.querySelectorAll('#pt tr[data-c]').forEach(function(tr){ var o={code:tr.getAttribute('data-c')}; tr.querySelectorAll('[data-k]').forEach(function(i){ o[i.getAttribute('data-k')]=i.value; }); rows.push(o); });
-  api('apiEditPlan',ST.token,ST.siteId,rows).then(function(d){ refreshSite(d); toast('Plan saved. Plan finish: '+dshow(d.site['Plan Finish'])); }).catch(function(e){ showErr('pe',e); });
+  api('apiEditPlan',ST.token,ST.siteId,planRows(),$('ptar').value,$('prs').value).then(function(d){ refreshSite(d); toast('Plan saved. Plan finish: '+dshow(d.site['Plan Finish'])); }).catch(function(e){ showErr('pe',e); });
 }
 function lockPlan(on){
   var reason=''; if(!on){ reason=prompt('Reason for unlocking the plan:'); if(!reason) return; } else if(!confirm('Approve and lock this plan? Planned dates will not change after this.')) return;

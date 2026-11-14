@@ -86,6 +86,8 @@ footer.site{max-width:1100px;margin:0 auto;padding:6px 16px 28px;text-align:cent
 .mis h3{border-bottom:2px solid var(--orange);padding-bottom:4px;margin-top:18px}
 .mis table td,.mis table th{font-size:12px}
 .printhead{display:none}
+.phgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.phbox{border:1px solid #d5dbe7;border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid}.phhead{background:#1f3864;color:#fff;font-weight:bold;font-size:12px;padding:6px 8px}.phbox img{width:100%;display:block;max-height:240px;object-fit:cover}.phcap{padding:6px 8px;font-size:12px}
+@media print{.phgrid{grid-template-columns:repeat(3,1fr)}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
 @page{size:A4 landscape;margin:10mm}
 @media print{header,.tabs,.noprint,.toolbar,.toast,footer.site,.modal{display:none!important}body{background:#fff!important}main{max-width:none!important;padding:0!important}.card{box-shadow:none!important;border:1px solid #cfd6e3!important;break-inside:avoid}.scroll{overflow:visible!important}.scroll svg{max-width:100%!important;height:auto!important}.printhead{display:block;margin-bottom:8px;border-bottom:3px solid #f37022;padding-bottom:4px}}
@@ -200,6 +202,7 @@ function misProgress(d){
     return ['<b>'+esc(j.code)+'</b>',esc(j.description),dshow(j.planStart)+' to '+dshow(j.planFinish),j.actualStart?dshow(j.actualStart):'-',j.actualFinish?dshow(j.actualFinish):'-',(j.st.pct!=null?j.st.pct:0)+'%',j.st.delay>0?'<b style="color:var(--red)">'+j.st.delay+'</b>':'0',esc(j.st.status)];
   }),['No.','Activity','Planned','Actual start','Actual finish','Done','Days delayed','Status'])+'</div>';
   h+='<div class="card"><h3 style="margin-top:0">Bar chart</h3>'+ganttLegend()+'<div class="scroll" style="margin-top:8px">'+ganttSvg(d)+'</div></div>';
+  h+=misPhotos(d,'Site photographs',60);
   var df=d.defects||[], op=df.filter(function(x){return x.status==='Open';}).length;
   h+='<div class="card"><h3 style="margin-top:0">Hindrances and defects</h3><p>Hindrances recorded: <b>'+(d.hind||[]).length+'</b> (approved days: <b>'+(sm.hindranceDays||0)+'</b>, pending approval: <b>'+(sm.pendingHindrances||0)+'</b>)<br>Defective work: <b>'+df.length+'</b> recorded, <b>'+op+'</b> still open</p></div>';
   return h;
@@ -278,6 +281,8 @@ function misDelay(d){
   var h=misHead(d,'Delay and responsibility analysis');
   h+='<div class="card"><h3 style="margin-top:0">Who is responsible for the delay? (total delay days of all activities)</h3>'+(rows.length?misBar(rows):'<p class="ok">No delay.</p>')+'<p class="muted">Delay on the IOCL / LOI Holder side or due to external causes may justify a time extension. Delay on the contractor side attracts the price discount as per contract. Reason not recorded should be filled by the TPI.</p></div>';
   h+='<div class="card"><h3 style="margin-top:0">Activity-wise delay</h3>'+(late.length?misTable(late.map(function(j){ return ['<b>'+esc(j.code)+'</b>',esc(j.description),'<b style="color:var(--red)">'+j.st.delay+'</b>',j.st.impact>0?j.st.impact+' d':'None',esc(dCat(j.delayReason)),esc(j.delayReason||'-'),esc(j.delayAnalysis||'-')]; }),['No.','Activity','Days delayed','Delays project by','Responsibility','Reason','Analysis']):'<p class="ok">No activity is delayed.</p>')+'</div>';
+  var lc={}; late.forEach(function(j){ lc[j.code]=1; });
+  h+=misPhotos(d,'Photographs of delayed activities',30,function(p){ return lc[p.code]; });
   return h;
 }
 function misExec(d){
@@ -296,6 +301,7 @@ function misExec(d){
    '<div class="kpis">'+kpi(sm.plannedPct+'%','Planned progress')+kpi(sm.actualPct+'%','Actual progress')+kpi(sm.lateCount,'Delayed activities')+kpi(sm.beyondEnd>0?sm.beyondEnd:0,'Days beyond contractual date')+'</div></div>';
   h+='<div class="card"><h3 style="margin-top:0">Five most delayed activities</h3>'+(late.length?misTable(late.map(function(j){ return ['<b>'+esc(j.code)+'</b>',esc(j.description),'<b style="color:var(--red)">'+j.st.delay+'</b>',j.st.impact>0?j.st.impact+' d':'None',esc(j.delayReason||'-')]; }),['No.','Activity','Days delayed','Delays project by','Reason']):'<p class="ok">None.</p>')+'</div>';
   h+='<div class="card"><h3 style="margin-top:0">Management attention needed</h3><ul>'+acts.map(function(a){ return '<li>'+esc(a)+'</li>'; }).join('')+'</ul></div>';
+  h+=misPhotos(d,'Latest site photographs',6);
   return h;
 }
 function misLook(d){
@@ -320,6 +326,7 @@ function misReg(d){
   var h=misHead(d,'Hindrance and defect register');
   h+='<div class="card"><h3 style="margin-top:0">Hindrance register</h3>'+((d.hind||[]).length?misTable(d.hind.map(function(x){ return [esc(x.codes||'-'),dshow(x.from),dshow(x.to),x.days||'-',esc(x.cause||'-'),esc(x.details||'-'),esc(x.status||'-'),x.approvedDays||'-']; }),['Works affected','From','To','Days','Cause','Details','Status','Approved days']):'<p class="muted">No hindrance recorded.</p>')+'</div>';
   h+='<div class="card"><h3 style="margin-top:0">Defect register</h3>'+((d.defects||[]).length?misTable(d.defects.map(function(x){ return [esc(x.id),esc(x.code||'-'),esc(x.category||'-'),esc(x.defect||'-'),esc(x.severity||'-'),dshow(x.due),esc(x.status),x.overdue?'<b style="color:var(--red)">'+x.overdue+' d</b>':'-']; }),['ID','Work','Category','Defect','Severity','Rectify by','Status','Overdue']):'<p class="muted">No defect recorded.</p>')+'</div>';
+  h+=misDefPhotos(d);
   return h;
 }
 function misFin(d){
@@ -328,6 +335,23 @@ function misFin(d){
   return h+'<div class="card"><h3 style="margin-top:0">Financial exposure (estimate)</h3><div class="kpis">'+kpi(s['PO Amount']?money(s['PO Amount']):'-','PO value')+kpi(s['Work Done Value']?money(s['Work Done Value']):'-','Work done value')+kpi(sm.beyondEnd>0?sm.beyondEnd:0,'Days beyond contractual date')+kpi(sm.discount?sm.discount.pct+'%':'0%','Price discount')+kpi(sm.discount?money(sm.discount.amount):'-','Discount amount')+kpi(money(sm.tpiRecovery||0),'TPI cost recovery')+'</div><p class="muted">Price discount at the contract rate per week of delay beyond the contractual completion date. Estimate only; final figure as per approved hindrances and contract.</p></div>';
 }
 function misBody(d){ var k=ST.misRep||'prog'; return ({prog:misProgress,exec:misExec,delay:misDelay,look:misLook,upd:misUpd,reg:misReg,fin:misFin}[k]||misProgress)(d); }
+/* ===== photographs in reports ===== */
+function misPhotos(d,title,max,filter,list){
+  var desc={}; d.jobs.forEach(function(j){ desc[j.code]=j.description; });
+  var ph=(list||d.photos||[]).filter(filter||function(){return true;}).slice(0,max||60);
+  var h='<div class="card"><h3 style="margin-top:0">'+esc(title)+'</h3>';
+  if(!ph.length) return h+'<p class="muted">No photographs uploaded yet.</p></div>';
+  h+='<div class="phgrid">'+ph.map(function(p,i){
+    var img=p.id?'<img src="https://drive.google.com/thumbnail?id='+encodeURIComponent(p.id)+'&sz=w600" alt="" onerror="this.style.display=\'none\'">':'';
+    var head=(p.head||('Photo '+(i+1)+': '+(p.code||'')+(desc[p.code]?' - '+desc[p.code]:'')));
+    return '<div class="phbox"><div class="phhead">'+esc(head)+'</div>'+img+'<div class="phcap">'+(p.caption?esc(p.caption)+'<br>':'')+'<span class="muted">'+esc(p.time||'')+(p.user?' &middot; '+esc(p.user):'')+(p.link?' &middot; <a href="'+esc(p.link)+'" target="_blank">open</a>':'')+'</span></div></div>';
+  }).join('')+'</div></div>';
+  return h;
+}
+function misDefPhotos(d){
+  var l=(d.defects||[]).filter(function(x){ return x.photo; }).map(function(x){ var m=String(x.photo).match(/\/d\/([\w-]+)|id=([\w-]+)/); return {id:m?(m[1]||m[2]):'',link:x.photo,code:x.code,caption:x.defect,time:x.raisedAt,user:x.raisedBy,head:'Defect '+x.id+' ('+(x.code||'-')+'): '+(x.category||'')+' - '+x.status}; });
+  return misPhotos(d,'Defect photographs',60,null,l);
+}
 function setMis(k){ ST.misRep=k; renderSite(); }
 function tMis(d){
   var L=MIS_REPS.filter(function(x){ return x[0]!=='fin'||can('officer'); });

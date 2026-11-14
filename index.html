@@ -71,7 +71,7 @@ textarea{min-height:70px}
 <body>
 <div id="app"></div>
 <script>
- 
+/* ============ helpers ============ */
 var ST={token:null,user:null,boot:null,site:null,tab:'summary',siteId:null};
 try{ ST.token=localStorage.getItem('ropace_token'); }catch(e){}
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -82,8 +82,8 @@ function dnum(s){ var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return 
 function money(n){ n=Math.round(+n||0); return 'Rs. '+n.toLocaleString('en-IN'); }
 function toast(t){ var d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(function(){ d.remove(); },3500); }
 var busy=0; function load(on){ busy+=on?1:-1; var l=document.querySelector('.loading'); if(busy>0&&!l){ l=document.createElement('div'); l.className='loading'; document.body.appendChild(l);} if(busy<=0&&l) l.remove(); }
-
-
+/* If this page is opened from an outside web address (not from script.google.com),
+   paste the RO-PACE web app link (ending in /exec) between the quotes below. */
 var API_URL='https://script.google.com/macros/s/AKfycbx-UFpRH23UioWkKtBd8E2yk5SC-qYWw5Zs_Clea_UZcC0lf8ig4Y8zqBNbh9udqgsmeA/exec';
 function hasGs(){ try{ return !!(window.google&&google.script&&google.script.run); }catch(e){ return false; } }
 function api(fn){
@@ -113,6 +113,7 @@ function can(what){
   if(what==='update') return r==='ADMIN'||r==='OFFICER'||r==='TPI';
   if(what==='approve'||what==='admin') return r==='ADMIN';
   if(what==='officer') return r==='ADMIN'||r==='OFFICER';
+  if(what==='addsite') return r==='ADMIN'||r==='OFFICER'||r==='TPI';
   return false;
 }
 function modal(html){ closeModal(); var m=document.createElement('div'); m.className='modal'; m.id='modal'; m.innerHTML='<div class="box">'+html+'</div>';
@@ -120,7 +121,7 @@ function modal(html){ closeModal(); var m=document.createElement('div'); m.class
 function closeModal(){ var m=$('modal'); if(m) m.remove(); }
 function showErr(id,e){ var el=$(id); if(el) el.textContent=e.message||e; else toast(e.message||e); }
 
- 
+/* ============ login ============ */
 function viewLogin(msg){
   $('app').innerHTML='<header><div class="t">RO-PACE<small>Site RO Work Monitoring</small></div></header>'+
   '<main><div class="card login"><h2>Log in</h2>'+
@@ -147,7 +148,7 @@ function shell(title, sub, body, back){
    '<button onclick="logout()">Log out</button></header><main>'+body+'</main>';
 }
 
- 
+/* ============ home: all sites ============ */
 function home(){
   ST.siteId=null;
   api('apiBoot',ST.token).then(function(b){ ST.boot=b; ST.user=b.user; renderHome(); }).catch(function(e){ toast(e.message); });
@@ -163,14 +164,16 @@ function renderHome(){
     kpi('<span style="color:var(--red)">'+cnt.Red+'</span>','Sites in RED (serious delay)')+
     kpi('<span style="color:var(--amber)">'+cnt.Amber+'</span>','Sites in AMBER (some delay)')+
     kpi('<span style="color:var(--green)">'+cnt.Green+'</span>','Sites on time')+
-    (can('approve')?kpi(pend,'Hindrances waiting for approval'):'')+'</div>';
+    (can('approve')?kpi(pend,'Hindrances waiting for approval'):'')+(can('officer')?kpi('<span style="color:var(--amber)">'+s.filter(function(x){return x.status==='Pending Approval';}).length+'</span>','Sites waiting for your approval'):'')+'</div>';
   h+='<div class="row" style="margin:12px 0;align-items:center"><div><select onchange="ST.homeFilter=this.value;renderHome()">'+
-     ['Active','Completed','On hold','All'].map(function(o){ return '<option'+(o===filt?' selected':'')+'>'+o+'</option>'; }).join('')+'</select></div>'+
-     '<div style="text-align:right;flex:2">'+(can('admin')?'<button class="btn" onclick="editSite(null)">+ New site</button> <button class="btn sec" onclick="usersView()">Users</button>':'')+'</div></div>';
-  if(!shown.length) h+='<div class="card muted">No sites to show.'+(can('admin')?' Click "+ New site" to add one.':'')+'</div>';
+     ['Active','Pending Approval','Rejected','Completed','On hold','All'].map(function(o){ return '<option'+(o===filt?' selected':'')+'>'+o+'</option>'; }).join('')+'</select></div>'+
+     '<div style="text-align:right;flex:2">'+(can('addsite')?'<button class="btn" onclick="editSite(null)">+ New site</button> ':'')+(can('admin')?'<button class="btn sec" onclick="usersView()">Users</button>':'')+'</div></div>';
+  if(!shown.length) h+='<div class="card muted">No sites to show.'+(can('addsite')?' Click "+ New site" to add one.':'')+'</div>';
   shown.forEach(function(x){
     var sm=x.sm;
-    h+='<div class="card site" onclick="openSite(\''+esc(x.id)+'\')"><div class="top"><div><div class="name">'+esc(x.roName)+'</div>'+
+    var stBadge=x.status==='Pending Approval'?'<div style="margin-top:4px"><span class="chip amber">Waiting for IOCL approval</span> <span class="muted">added by '+esc(x.createdBy||'-')+'</span></div>':x.status==='Rejected'?'<div style="margin-top:4px"><span class="chip red">Rejected</span></div>':'';
+    var stBtn=(x.status==='Pending Approval'&&can('officer'))?'<div style="margin-top:8px" onclick="event.stopPropagation()"><button class="btn small" onclick="reviewSite(\''+esc(x.id)+'\',\'approve\')">Accept site</button> <button class="btn small sec" onclick="reviewSite(\''+esc(x.id)+'\',\'reject\')">Reject</button></div>':'';
+    h+='<div class="card site" onclick="openSite(\''+esc(x.id)+'\')"><div class="top"><div><div class="name">'+esc(x.roName)+'</div>'+stBadge+stBtn+
        '<div class="muted">'+esc(x.id)+' · '+esc(x.contractor||'-')+' · '+esc(x.location||'')+'</div></div><span class="chip '+sm.health+'">'+sm.health+'</span></div>'+
        '<div class="row" style="margin-top:8px"><div><div class="muted">Planned '+sm.plannedPct+'%</div><div class="bar"><i class="blue" style="width:'+sm.plannedPct+'%"></i></div>'+
        '<div class="muted">Actual '+sm.actualPct+'%</div><div class="bar"><i class="'+(sm.gap>5?'red':'green')+'" style="width:'+sm.actualPct+'%"></i></div></div>'+
@@ -181,15 +184,16 @@ function renderHome(){
 }
 function kpi(v,l){ return '<div class="kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'; }
 
- 
+/* ============ one site ============ */
 function openSite(id){ ST.siteId=id; ST.tab=ST.tab||'summary'; api('apiSite',ST.token,id).then(function(d){ ST.site=d; renderSite(); }).catch(function(e){ toast(e.message); }); }
 function refreshSite(d){ ST.site=d; renderSite(); }
 var TABS=[['summary','Summary'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['admin','Site settings']];
 function renderSite(){
   var d=ST.site, s=d.site;
+  var banner=s['Status']==='Pending Approval'?'<div class="card" style="border-left:5px solid var(--amber)"><b>This site is waiting for IOCL approval.</b> (added by '+esc(s['Created By']||'-')+')'+(can('officer')?'<div style="margin-top:8px"><button class="btn small" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'approve\')">Accept site</button> <button class="btn small sec" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'reject\')">Reject</button></div>':'<div class="muted">Updates can start after an IOCL officer accepts it.</div>')+'</div>':s['Status']==='Rejected'?'<div class="card" style="border-left:5px solid var(--red)"><b>This site was rejected.</b> See the History tab for the reason.</div>':'';
   var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]!=='admin'||can('officer'); }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
   var body={summary:tSummary,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,admin:tAdmin}[ST.tab]||tSummary;
-  shell(s['RO Name'], s['Site ID']+' · '+(s['Contractor Name']||''), tabs+body(d), 'home()');
+  shell(s['RO Name'], s['Site ID']+' · '+(s['Contractor Name']||''), banner+tabs+body(d), 'home()');
 }
 function tSummary(d){
   var sm=d.sm, s=d.site;
@@ -225,7 +229,7 @@ function previewAlert(){
 }
 function sendAlert(){ if(!confirm('Send reminder e-mail to the contractor now?')) return; api('apiSendAlert',ST.token,ST.siteId).then(function(m){ toast(m); }).catch(function(e){ toast(e.message); }); }
 
- 
+/* ---- work list ---- */
 function tWork(d){
   var h='<div class="card"><div class="muted">Tap a work to '+(can('update')?'update progress, dates, reason for delay & photos.':'see details.')+'</div>';
   var area=null;
@@ -284,7 +288,7 @@ function photoLink(i){
 }
 function savePhotoLink(code){ api('apiAddPhotoLink',ST.token,ST.siteId,code,v('pl'),v('pc')).then(function(d){ closeModal(); refreshSite(d); toast('Photo link saved'); }).catch(function(e){ showErr('pe',e); }); }
 
- 
+/* ---- defects (defective work) ---- */
 function canRect(){ var r=role(); return r==='ADMIN'||r==='OFFICER'||r==='TPI'||r==='CONTRACTOR'; }
 var DSTAT={Open:'red',Rectified:'blue',Closed:'green',Cancelled:'grey'};
 function defCard(d){
@@ -348,7 +352,7 @@ function cancelDefect(id){
 }
 function sendDefRem(){ if(!confirm('Send defect reminder to the contractor now?')) return; api('apiSendDefectReminder',ST.token,ST.siteId).then(function(m){ toast(m); openSite(ST.siteId); }).catch(function(e){ toast(e.message); }); }
 
- 
+/* ---- bar chart ---- */
 function tChart(d){
   var s=d.site, start=dnum(s['Start Date']), jobs=d.jobs, today=dnum(ST.boot.today);
   var maxD=Math.max(+s['Contract Days']||105, (dnum(d.sm.forecastFinish)||0)-start+1, today-start+1)+3;
@@ -377,7 +381,7 @@ function tChart(d){
    '<div class="scroll" style="margin-top:8px">'+svg+'</div></div>';
 }
 
- 
+/* ---- hindrances ---- */
 function tHind(d){
   var L=ST.boot.lists||{};
   var h='<div class="card"><h3 style="margin-top:0">What is a hindrance?</h3><div class="muted">A problem that stopped work and was NOT in the contractor\'s control (e.g. IOCL drawing late, LOI Holder work pending, heavy rain, local issue). TPI / officers enter it with exact dates. Admin checks and approves. Approved days are used for time extension.</div>';
@@ -411,7 +415,7 @@ function reviewHind(id){
 }
 function doReview(id,act){ api('apiReviewHindrance',ST.token,id,act,v('rf'),v('rt'),v('rr')).then(function(d){ closeModal(); refreshSite(d); toast('Done'); }).catch(function(e){ showErr('re',e); }); }
 
- 
+/* ---- photos & history ---- */
 function tPhotos(d){
   if(!d.photos.length) return '<div class="card muted">No photos yet. Open any work in "Work list" and use "Add photo". Photos are optional.</div>';
   return '<div class="photos">'+d.photos.map(function(p){
@@ -424,7 +428,7 @@ function tHistory(d){
   return h;
 }
 
- 
+/* ---- site settings (officer / admin) ---- */
 var FIELDS=[['RO Name','text'],['Location','text'],['Divisional Office','text'],['Tender No','text'],['Vendor Code','text'],['Contractor Name','text'],
  ['Contractor Email','email'],['Contractor WhatsApp','tel'],['PO No','text'],['PO Amount','number'],['PO Date','date'],['Handover Date','date'],
  ['Start Date Override','date'],['Contract Days','number'],['Engineer-in-Charge Email','email'],['TPI Email','text'],['Officer Emails','text'],['Work Done Value','number']];
@@ -443,7 +447,12 @@ function readForm(box){ var o={}; box.querySelectorAll('[data-f]').forEach(funct
 function editSite(s){
   modal('<h2>'+(s?'Edit site details':'New site')+'</h2><div id="sf">'+siteForm(s)+'</div><div id="se" class="err"></div>'+
     '<div class="row" style="margin-top:12px"><button class="btn" onclick="saveSite('+(s?'\''+esc(s['Site ID'])+'\'':'null')+')">Save</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>'+
-    (s?'':'<p class="muted">The work list and planned dates are made automatically from the WORK TEMPLATE sheet. Check them in "Site settings" and then lock the plan.</p>'));
+    (s?'':'<p class="muted">The work list and planned dates are made automatically from the WORK TEMPLATE sheet. '+(role()==='TPI'?'This site will be sent to the IOCL officer for acceptance before work updates start.':'As you are an IOCL officer / admin, the site is approved automatically. Check the plan in "Site settings" and then lock it.')+'</p>'));
+}
+
+function reviewSite(id,action){
+  modal('<h2>'+(action==='approve'?'Accept this site?':'Reject this site')+'</h2><label>Remark'+(action==='reject'?' (reason is required)':' (optional)')+'</label><textarea id="rsr" rows="3"></textarea><div id="rse" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" id="rsb">'+(action==='approve'?'Accept site':'Reject site')+'</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+  $('rsb').onclick=function(){ api('apiReviewSite',ST.token,id,action,$('rsr').value).then(function(){ closeModal(); toast(action==='approve'?'Site accepted':'Site rejected'); if(ST.siteId===id) openSite(id); else home(); }).catch(function(e){ showErr('rse',e); }); };
 }
 function saveSite(id){
   var o=readForm($('sf')); if(id) o['Site ID']=id;
@@ -480,7 +489,7 @@ function lockPlan(on){
 function saveExtra(){ api('apiExtraDays',ST.token,ST.siteId,v('xd'),v('xr')).then(function(d){ refreshSite(d); toast('Extension saved'); }).catch(function(e){ showErr('xe',e); }); }
 function setStatus(x){ api('apiSetStatus',ST.token,ST.siteId,x).then(function(){ openSite(ST.siteId); }).catch(function(e){ toast(e.message); }); }
 
- 
+/* ============ users (admin) ============ */
 function usersView(){
   api('apiUsers',ST.token).then(function(us){
     var h='<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Users</h3><div style="text-align:right"><button class="btn" onclick="editUser(null)">+ Add user</button></div></div>'+
@@ -505,7 +514,7 @@ function saveUser(){
 }
 function resetPin(email){ if(!confirm('Make a new PIN for '+email+'?')) return; api('apiResetPin',ST.token,email).then(function(r){ alert('New PIN for '+email+': '+r.pin+'\n(Also e-mailed.)'); }).catch(function(e){ toast(e.message); }); }
 
- 
+/* ============ start ============ */
 if(ST.token) home(); else viewLogin();
 </script>
 </body>

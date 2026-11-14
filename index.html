@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RO-PACE</title>
+<style>
+:root{--navy:#1f3864;--orange:#f37022;--bg:#f3f5f9;--card:#fff;--ink:#1d2433;--mute:#667085;--line:#e3e7ee;
+--green:#2e7d32;--amber:#b26a00;--red:#c00000;--blue:#2f75b5;--grey:#9aa3af;--purple:#7030a0}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+a{color:var(--blue)}
+header{background:var(--navy);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+header .t{font-weight:bold;font-size:17px;flex:1}
+header .t small{font-weight:normal;opacity:.8;font-size:12px;display:block}
+header button{background:transparent;border:1px solid #ffffff66;color:#fff;padding:6px 10px;border-radius:6px;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:12px 16px 60px}
+.card{background:var(--card);border-radius:10px;box-shadow:0 1px 3px #0001;padding:14px;margin-bottom:12px}
+h2{font-size:18px;margin:4px 0 10px}h3{font-size:15px;margin:14px 0 8px;color:var(--navy)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 1px 3px #0001}
+.kpi .v{font-size:22px;font-weight:bold}.kpi .l{font-size:12px;color:var(--mute);margin-top:2px}
+.chip{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:bold;color:#fff;white-space:nowrap}
+.Green,.green{background:var(--green)}.Amber,.amber{background:var(--amber)}.Red,.red{background:var(--red)}.blue{background:var(--blue)}.grey{background:var(--grey)}
+.bar{height:8px;background:#e8ebf1;border-radius:6px;overflow:hidden;position:relative;margin:3px 0}
+.bar i{display:block;height:100%}
+.tabs{display:flex;gap:4px;overflow-x:auto;margin:6px 0 12px;border-bottom:2px solid var(--line)}
+.tabs button{background:none;border:0;padding:10px 12px;font-size:14px;color:var(--mute);white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button.on{color:var(--navy);border-color:var(--orange);font-weight:bold}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--navy);color:#fff;text-align:left;padding:7px;font-weight:normal}
+td{padding:7px;border-bottom:1px solid var(--line);vertical-align:top}
+.scroll{overflow-x:auto}
+.btn{background:var(--orange);color:#fff;border:0;padding:9px 14px;border-radius:6px;font-size:14px;cursor:pointer}
+.btn.sec{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.btn.small{padding:5px 9px;font-size:12px}
+.btn.wa{background:#1fa855}
+.btn:disabled{opacity:.5}
+label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:9px;border:1px solid #c7ccd6;border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
+textarea{min-height:70px}
+.muted{color:var(--mute);font-size:12px}
+.site{cursor:pointer}
+.site .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.site .name{font-weight:bold}
+.job{display:flex;gap:8px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.job .c{width:38px;font-weight:bold;color:var(--navy)}
+.job .d{flex:1}
+.job .s{text-align:right;min-width:110px}
+.area{background:#eef1f7;padding:6px 8px;font-weight:bold;color:var(--navy);border-radius:6px;margin-top:10px}
+.modal{position:fixed;inset:0;background:#0007;display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.modal .box{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:16px}
+@media(min-width:700px){.modal{align-items:center}.modal .box{border-radius:14px}}
+.err{color:var(--red);margin-top:8px;font-size:14px}
+.ok{color:var(--green)}
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:8px;z-index:30;font-size:14px;max-width:90%}
+.loading{position:fixed;top:0;left:0;right:0;height:3px;background:var(--orange);z-index:40;animation:ld 1s infinite}
+@keyframes ld{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.photos .p{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px #0002;font-size:12px}
+.photos img{width:100%;height:120px;object-fit:cover;display:block;background:#ddd}
+.photos .p div{padding:6px}
+.legend span{display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:12px}
+.legend i{width:14px;height:8px;display:inline-block;border-radius:2px}
+.login{max-width:380px;margin:40px auto}
+.pre{white-space:pre-wrap;background:#f6f7f9;border:1px solid var(--line);padding:10px;border-radius:6px;font-size:13px;max-height:300px;overflow:auto}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+ 
+var ST={token:null,user:null,boot:null,site:null,tab:'summary',siteId:null};
+try{ ST.token=localStorage.getItem('ropace_token'); }catch(e){}
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s===undefined||s===null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dshow(s){ if(!s) return '-'; var m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return esc(s); return m[3]+'-'+MON[+m[2]-1]+'-'+m[1].slice(2); }
+function dnum(s){ var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?Math.round(Date.UTC(+m[1],m[2]-1,+m[3])/864e5):null; }
+function money(n){ n=Math.round(+n||0); return 'Rs. '+n.toLocaleString('en-IN'); }
+function toast(t){ var d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(function(){ d.remove(); },3500); }
+var busy=0; function load(on){ busy+=on?1:-1; var l=document.querySelector('.loading'); if(busy>0&&!l){ l=document.createElement('div'); l.className='loading'; document.body.appendChild(l);} if(busy<=0&&l) l.remove(); }
+
+
+var API_URL='https://script.google.com/macros/s/AKfycbx-UFpRH23UioWkKtBd8E2yk5SC-qYWw5Zs_Clea_UZcC0lf8ig4Y8zqBNbh9udqgsmeA/exec';
+function hasGs(){ try{ return !!(window.google&&google.script&&google.script.run); }catch(e){ return false; } }
+function api(fn){
+  var args=Array.prototype.slice.call(arguments,1);
+  load(true);
+  function fail(m,rej){
+    load(false);
+    if(String(m).indexOf('SESSION_EXPIRED')>=0){ logout(true); rej(new Error('Please log in again.')); return; }
+    rej(new Error(m));
+  }
+  return new Promise(function(res,rej){
+    if(hasGs()){
+      google.script.run.withSuccessHandler(function(r){ load(false); res(r); })
+        .withFailureHandler(function(e){ fail((e&&e.message)||String(e),rej); })[fn].apply(null,args);
+      return;
+    }
+    if(API_URL.indexOf('https://')!==0){ fail('Web app link not set in this page (API_URL).',rej); return; }
+    fetch(API_URL,{method:'POST',credentials:'omit',redirect:'follow',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:args})})
+      .then(function(r){ return r.json(); })
+      .then(function(x){ if(x.ok){ load(false); res(x.r); } else fail(x.error||x.e||'Error',rej); })
+      .catch(function(){ fail('Cannot reach RO-PACE. Check internet connection.',rej); });
+  });
+}
+function role(){ return ST.user?ST.user.role:''; }
+function can(what){
+  var r=role();
+  if(what==='update') return r==='ADMIN'||r==='OFFICER'||r==='TPI';
+  if(what==='approve'||what==='admin') return r==='ADMIN';
+  if(what==='officer') return r==='ADMIN'||r==='OFFICER';
+  return false;
+}
+function modal(html){ closeModal(); var m=document.createElement('div'); m.className='modal'; m.id='modal'; m.innerHTML='<div class="box">'+html+'</div>';
+  m.onclick=function(e){ if(e.target===m) closeModal(); }; document.body.appendChild(m); }
+function closeModal(){ var m=$('modal'); if(m) m.remove(); }
+function showErr(id,e){ var el=$(id); if(el) el.textContent=e.message||e; else toast(e.message||e); }
+
+ 
+function viewLogin(msg){
+  $('app').innerHTML='<header><div class="t">RO-PACE<small>Site RO Work Monitoring</small></div></header>'+
+  '<main><div class="card login"><h2>Log in</h2>'+
+  '<label>E-mail</label><input id="em" type="email" autocomplete="username">'+
+  '<label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password">'+
+  '<div style="margin-top:14px"><button class="btn" id="lb" onclick="doLogin()" style="width:100%">Log in</button></div>'+
+  '<div id="le" class="err">'+esc(msg||'')+'</div><p class="muted">Forgot PIN? Ask your RO-PACE admin to reset it.</p></div></main>';
+  $('pin').onkeydown=function(e){ if(e.key==='Enter') doLogin(); };
+}
+function doLogin(){
+  api('apiLogin',$('em').value,$('pin').value).then(function(r){
+    ST.token=r.token; ST.user=r.user; try{ localStorage.setItem('ropace_token',r.token); }catch(e){}
+    home();
+  }).catch(function(e){ showErr('le',e); });
+}
+function logout(expired){
+  if(ST.token && !expired){ try{ api('apiLogout',ST.token).catch(function(){}); }catch(e){} }
+  ST.token=null; ST.user=null; try{ localStorage.removeItem('ropace_token'); }catch(e){}
+  viewLogin(expired?'Session ended. Please log in again.':'');
+}
+function shell(title, sub, body, back){
+  $('app').innerHTML='<header>'+(back?'<button onclick="'+back+'">&larr;</button>':'')+
+   '<div class="t">'+esc(title)+'<small>'+esc(sub||'')+'</small></div>'+
+   '<button onclick="logout()">Log out</button></header><main>'+body+'</main>';
+}
+
+ 
+function home(){
+  ST.siteId=null;
+  api('apiBoot',ST.token).then(function(b){ ST.boot=b; ST.user=b.user; renderHome(); }).catch(function(e){ toast(e.message); });
+}
+function renderHome(){
+  var b=ST.boot, s=b.sites.slice(), filt=ST.homeFilter||'Active';
+  var shown=s.filter(function(x){ return filt==='All'||x.status===filt; });
+  shown.sort(function(a,b){ return (b.sm.slip-a.sm.slip)||(b.sm.lateCount-a.sm.lateCount); });
+  var cnt={Green:0,Amber:0,Red:0}, pend=0;
+  s.filter(function(x){ return x.status==='Active'; }).forEach(function(x){ cnt[x.sm.health]++; pend+=x.sm.pendingHindrances; });
+  var h='<div class="kpis">'+
+    kpi(s.filter(function(x){return x.status==='Active';}).length,'Active sites')+
+    kpi('<span style="color:var(--red)">'+cnt.Red+'</span>','Sites in RED (serious delay)')+
+    kpi('<span style="color:var(--amber)">'+cnt.Amber+'</span>','Sites in AMBER (some delay)')+
+    kpi('<span style="color:var(--green)">'+cnt.Green+'</span>','Sites on time')+
+    (can('approve')?kpi(pend,'Hindrances waiting for approval'):'')+'</div>';
+  h+='<div class="row" style="margin:12px 0;align-items:center"><div><select onchange="ST.homeFilter=this.value;renderHome()">'+
+     ['Active','Completed','On hold','All'].map(function(o){ return '<option'+(o===filt?' selected':'')+'>'+o+'</option>'; }).join('')+'</select></div>'+
+     '<div style="text-align:right;flex:2">'+(can('admin')?'<button class="btn" onclick="editSite(null)">+ New site</button> <button class="btn sec" onclick="usersView()">Users</button>':'')+'</div></div>';
+  if(!shown.length) h+='<div class="card muted">No sites to show.'+(can('admin')?' Click "+ New site" to add one.':'')+'</div>';
+  shown.forEach(function(x){
+    var sm=x.sm;
+    h+='<div class="card site" onclick="openSite(\''+esc(x.id)+'\')"><div class="top"><div><div class="name">'+esc(x.roName)+'</div>'+
+       '<div class="muted">'+esc(x.id)+' · '+esc(x.contractor||'-')+' · '+esc(x.location||'')+'</div></div><span class="chip '+sm.health+'">'+sm.health+'</span></div>'+
+       '<div class="row" style="margin-top:8px"><div><div class="muted">Planned '+sm.plannedPct+'%</div><div class="bar"><i class="blue" style="width:'+sm.plannedPct+'%"></i></div>'+
+       '<div class="muted">Actual '+sm.actualPct+'%</div><div class="bar"><i class="'+(sm.gap>5?'red':'green')+'" style="width:'+sm.actualPct+'%"></i></div></div>'+
+       '<div class="muted" style="line-height:1.7">Day <b>'+(sm.dayNo||'-')+'</b> · Late jobs <b>'+sm.lateCount+'</b><br>Days behind <b>'+sm.slip+'</b> · Expected finish <b>'+dshow(sm.forecastFinish)+'</b><br>Last date (incl. extension) <b>'+dshow(sm.newEnd)+'</b>'+
+       (x.locked!=='YES'?'<br><span style="color:var(--amber)">Plan not yet approved / locked</span>':'')+(x.openDefects?'<br><span style="color:var(--red)"><b>'+x.openDefects+'</b> defect(s) to rectify'+(x.overdueDefects?' ('+x.overdueDefects+' overdue)':'')+'</span>':'')+(x.verifyDefects?'<br><span style="color:var(--blue)">'+x.verifyDefects+' rectified - to verify</span>':'')+'</div></div></div>';
+  });
+  shell('RO-PACE','Hello '+(ST.user.name||ST.user.email)+' ('+ST.user.role+')',h);
+}
+function kpi(v,l){ return '<div class="kpi"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'; }
+
+ 
+function openSite(id){ ST.siteId=id; ST.tab=ST.tab||'summary'; api('apiSite',ST.token,id).then(function(d){ ST.site=d; renderSite(); }).catch(function(e){ toast(e.message); }); }
+function refreshSite(d){ ST.site=d; renderSite(); }
+var TABS=[['summary','Summary'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['admin','Site settings']];
+function renderSite(){
+  var d=ST.site, s=d.site;
+  var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]!=='admin'||can('officer'); }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
+  var body={summary:tSummary,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,admin:tAdmin}[ST.tab]||tSummary;
+  shell(s['RO Name'], s['Site ID']+' · '+(s['Contractor Name']||''), tabs+body(d), 'home()');
+}
+function tSummary(d){
+  var sm=d.sm, s=d.site;
+  var h='<div class="kpis">'+kpi((sm.dayNo||'-')+'<span class="muted"> / '+(s['Contract Days']||105)+'</span>','Day no. today')+
+    kpi(sm.plannedPct+'%','Planned progress')+kpi('<span style="color:'+(sm.gap>5?'var(--red)':'var(--green)')+'">'+sm.actualPct+'%</span>','Actual progress')+
+    kpi('<span style="color:'+(sm.slip>0?'var(--red)':'var(--green)')+'">'+sm.slip+'</span>','Days behind plan')+
+    kpi(dshow(sm.forecastFinish),'Expected finish')+kpi(dshow(sm.newEnd),'Last date (incl. '+(s['Approved Extra Days']||0)+' days extension)')+'</div>';
+  if(sm.beyondEnd>0) h+='<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">Expected to finish '+sm.beyondEnd+' days after the last date.</b><br>'+
+    'Price discount (0.5% per week): <b>'+sm.discount.pct+'%</b> = <b>'+money(sm.discount.amount)+'</b> on work done value '+money(s['Work Done Value'])+'<br>TPI cost recovery: <b>'+money(sm.tpiRecovery)+'</b><div class="muted">Estimate only. Final figure as per approved hindrances & contract.</div></div>';
+  h+='<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Late work ('+sm.late.length+')</h3><div style="text-align:right;flex:2">'+
+     '<button class="btn wa small" onclick="waOpen()">WhatsApp message</button> <button class="btn sec small" onclick="waCopy()">Copy text</button> '+
+     (can('officer')?'<button class="btn sec small" onclick="previewAlert()">Preview e-mail</button> <button class="btn small" onclick="sendAlert()">Send reminder now</button>':'')+'</div></div>';
+  if(!sm.late.length) h+='<p class="ok">No work is late. Good progress.</p>';
+  else h+='<div class="scroll"><table><tr><th>No.</th><th>Work</th><th>Days late</th><th>Delays whole project?</th><th>Status</th></tr>'+
+    sm.late.map(function(j){ return '<tr><td><b>'+esc(j.code)+'</b></td><td>'+esc(j.description)+'</td><td><b style="color:'+(j.impact>0?'var(--red)':'var(--amber)')+'">'+j.delay+'</b></td><td>'+(j.impact>0?'<b style="color:var(--red)">YES</b>':'No')+'</td><td>'+esc(j.status)+'</td></tr>'; }).join('')+'</table></div>';
+  h+='</div>';
+  if(sm.externalLate.length) h+='<div class="card"><h3 style="margin-top:0">Pending from IOCL / LOI Holder (not contractor\'s delay)</h3>'+sm.externalLate.map(function(j){ return '<div>'+esc(j.code)+' - '+esc(j.description)+': <b>'+j.delay+' days late</b></div>'; }).join('')+'</div>';
+  h+=defCard(d);
+  h+='<div class="card"><h3 style="margin-top:0">Hindrances</h3>Approved hindrance days (overlaps counted once): <b>'+sm.hindranceDays+'</b> · Waiting for approval: <b>'+sm.pendingHindrances+'</b>'+
+     '<div class="muted">Admin decides the time extension after checking these.</div></div>';
+  if(String(s['Plan Locked']).toUpperCase()!=='YES') h+='<div class="card" style="border-left:5px solid var(--amber)">This plan is <b>not yet approved / locked</b>. Reminders start only after admin locks the plan (Site settings tab).</div>';
+  return h;
+}
+function waOpen(){ window.open('https://wa.me/?text='+encodeURIComponent(ST.site.wa),'_blank'); }
+function waCopy(){ var t=ST.site.wa; if(navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ toast('Copied. Paste in WhatsApp group.'); },function(){ modal('<div class="pre">'+esc(t)+'</div>'); }); else modal('<div class="pre">'+esc(t)+'</div>'); }
+function previewAlert(){
+  api('apiPreviewAlert',ST.token,ST.siteId).then(function(p){
+    if(!p.contractor){ toast('No late work - no reminder needed.'); return; }
+    modal('<h2>Reminder e-mail (preview)</h2><div class="muted">To: '+esc(p.contractor.to.join(', '))+'<br>Copy: '+esc(p.contractor.cc.join(', '))+'</div><p><b>'+esc(p.contractor.subject)+'</b></p><div class="pre" style="white-space:normal">'+p.contractor.html+'</div>'+
+      (p.draft?'<h3>Show-cause draft (goes only to Engineer-in-Charge & admins)</h3><div class="pre" style="white-space:normal">'+p.draft.html+'</div>':'')+
+      '<div style="margin-top:12px"><button class="btn sec" onclick="closeModal()">Close</button></div>');
+  }).catch(function(e){ toast(e.message); });
+}
+function sendAlert(){ if(!confirm('Send reminder e-mail to the contractor now?')) return; api('apiSendAlert',ST.token,ST.siteId).then(function(m){ toast(m); }).catch(function(e){ toast(e.message); }); }
+
+ 
+function tWork(d){
+  var h='<div class="card"><div class="muted">Tap a work to '+(can('update')?'update progress, dates, reason for delay & photos.':'see details.')+'</div>';
+  var area=null;
+  d.jobs.forEach(function(j,i){
+    if(j.area!==area){ area=j.area; h+='<div class="area">'+esc(area)+'</div>'; }
+    var st=j.st;
+    h+='<div class="job" onclick="editJob('+i+')"><div class="c">'+esc(j.code)+'</div><div class="d">'+esc(j.description)+
+       '<div class="muted">Plan: '+dshow(j.planStart)+' to '+dshow(j.planFinish)+(j.actualStart?' · Actual: '+dshow(j.actualStart)+' to '+dshow(j.actualFinish):'')+'</div>'+
+       (st.status!=='Not needed'&&!st.external?'<div class="bar" style="max-width:260px"><i class="'+st.colour+'" style="width:'+st.pct+'%"></i></div>':'')+'</div>'+
+       '<div class="s"><span class="chip '+st.colour+'">'+esc(st.status)+'</span>'+(st.delay>0?'<div class="muted" style="margin-top:3px">'+st.delay+' days late</div>':'')+'</div></div>';
+  });
+  return h+'</div>';
+}
+function editJob(i){
+  var j=ST.site.jobs[i], st=j.st, ro=!can('update'), L=ST.boot.lists||{}, ext=st.external;
+  var reasons=(L['Delay Reason']||[]);
+  var h='<h2>'+esc(j.code)+' · '+esc(j.description)+'</h2>'+
+   '<div class="muted">Done by: '+esc(j.doneBy)+' · Days needed: '+j.days+' · Spare days: '+j.spare+(j.tpiCheck?' · <b>TPI check needed</b>':'')+'<br>Plan: '+dshow(j.planStart)+' to '+dshow(j.planFinish)+'</div>'+
+   '<p><span class="chip '+st.colour+'">'+esc(st.status)+'</span> '+(st.delay>0?'<b>'+st.delay+' days late</b>'+(st.impact>0?' - <b style="color:var(--red)">delays whole project</b>':''):'')+'</p>';
+  if(ext){
+    h+='<label>Date received / done</label><input type="date" id="jaf" value="'+esc(j.actualFinish||'')+'"'+(ro?' disabled':'')+'>';
+  } else {
+    h+='<div class="row"><div><label>Actual start date</label><input type="date" id="jas" value="'+esc(j.actualStart||'')+'"'+(ro?' disabled':'')+'></div>'+
+      '<div><label>Actual finish date</label><input type="date" id="jaf" value="'+esc(j.actualFinish||'')+'"'+(ro?' disabled':'')+'></div></div>'+
+      '<div class="row"><div><label>% work done</label><input type="number" min="0" max="100" id="jpc" value="'+(j.pct||0)+'"'+(ro?' disabled':'')+'></div>'+
+      '<div><label>Expected finish date (if still going on)</label><input type="date" id="jef" value="'+esc(j.expectedFinish||'')+'"'+(ro?' disabled':'')+'></div></div>'+
+      '<label>Reason for delay '+(st.delay>0?'<b style="color:var(--red)">(required - work is late)</b>':'(if any)')+'</label><select id="jdr"'+(ro?' disabled':'')+'><option value="">-- select --</option>'+
+      reasons.map(function(r){ return '<option'+(r===j.delayReason?' selected':'')+'>'+esc(r)+'</option>'; }).join('')+'</select>'+
+      '<label>Delay analysis - what exactly caused the delay and what is being done</label><textarea id="jda"'+(ro?' disabled':'')+'>'+esc(j.delayAnalysis||'')+'</textarea>';
+  }
+  h+='<label>Remark</label><textarea id="jrm"'+(ro?' disabled':'')+'>'+esc(j.remark||'')+'</textarea>'+
+     (j.updatedBy?'<div class="muted">Last updated by '+esc(j.updatedBy)+' on '+esc(j.updatedAt)+'</div>':'')+
+     '<div id="je" class="err"></div><div class="row" style="margin-top:12px">'+
+     (ro?'':'<button class="btn" onclick="saveJob('+i+')">Save</button>')+
+     (can('update')&&!ext?'<button class="btn sec" onclick="addDefect(\''+esc(j.code)+'\')">Record defect</button>':'')+
+     (ro||ext?'':'<button class="btn sec" onclick="photoUpload('+i+')">Add photo</button><button class="btn sec" onclick="photoLink('+i+')">Paste photo link</button>')+
+     '<button class="btn sec" onclick="closeModal()">Close</button></div>';
+  modal(h);
+}
+function v(id){ var e=$(id); return e?e.value:''; }
+function saveJob(i){
+  var j=ST.site.jobs[i];
+  api('apiUpdateJob',ST.token,ST.siteId,j.code,{actualStart:v('jas'),actualFinish:v('jaf'),expectedFinish:v('jef'),pct:v('jpc'),remark:v('jrm'),delayReason:v('jdr'),delayAnalysis:v('jda')})
+   .then(function(d){ closeModal(); refreshSite(d); toast('Saved'); }).catch(function(e){ showErr('je',e); });
+}
+function photoUpload(i){
+  var j=ST.site.jobs[i];
+  api('apiPhotoTicket',ST.token,ST.siteId,j.code).then(function(url){ window.open(url,'_blank'); toast('Photo page opened in a new tab. Refresh here after saving.'); })
+   .catch(function(e){ showErr('je',e); });
+}
+function photoLink(i){
+  var j=ST.site.jobs[i];
+  modal('<h2>Paste photo link - '+esc(j.code)+'</h2><p class="muted">Upload the photo to your own Google Drive / Google Photos, set "Anyone with the link can view", and paste the link here.</p>'+
+    '<label>Photo link</label><input id="pl" placeholder="https://..."><label>Short note</label><input id="pc" maxlength="150">'+
+    '<div id="pe" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" onclick="savePhotoLink(\''+esc(j.code)+'\')">Save</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function savePhotoLink(code){ api('apiAddPhotoLink',ST.token,ST.siteId,code,v('pl'),v('pc')).then(function(d){ closeModal(); refreshSite(d); toast('Photo link saved'); }).catch(function(e){ showErr('pe',e); }); }
+
+ 
+function canRect(){ var r=role(); return r==='ADMIN'||r==='OFFICER'||r==='TPI'||r==='CONTRACTOR'; }
+var DSTAT={Open:'red',Rectified:'blue',Closed:'green',Cancelled:'grey'};
+function defCard(d){
+  var ds=d.defects||[]; if(!ds.length) return '';
+  var open=ds.filter(function(x){ return x.status==='Open'; }), od=open.filter(function(x){ return x.overdue>0; }), pv=ds.filter(function(x){ return x.status==='Rectified'; });
+  return '<div class="card" style="border-left:5px solid '+(open.length?'var(--red)':'var(--green)')+'"><h3 style="margin-top:0">Defective work</h3>Pending rectification: <b style="color:var(--red)">'+open.length+'</b> · Overdue: <b>'+od.length+'</b> · Rectified, to verify: <b>'+pv.length+'</b> '+
+    '<button class="btn sec small" style="margin-left:8px" onclick="ST.tab=\'defects\';renderSite()">Open</button></div>';
+}
+function tDefects(d){
+  var ds=(d.defects||[]).slice(), ord={Open:0,Rectified:1,Closed:2,Cancelled:3};
+  ds.sort(function(a,b){ return (ord[a.status]-ord[b.status])||(b.overdue-a.overdue); });
+  var cnt=function(s){ return ds.filter(function(x){ return x.status===s; }).length; }, od=ds.filter(function(x){ return x.overdue>0; }).length;
+  var h='<div class="card"><h3 style="margin-top:0">Defective work</h3><div class="muted">Record any defective or non-conforming work. The contractor is reminded every working day until the rectification is recorded here, and the TPI / officer then verifies and closes it.</div>'+
+   '<div class="kpis" style="margin-top:10px">'+kpi('<span style="color:var(--red)">'+cnt('Open')+'</span>','Pending rectification')+kpi(od,'Overdue')+kpi(cnt('Rectified'),'Rectified - to verify')+kpi(cnt('Closed'),'Closed')+'</div>'+
+   '<div class="row" style="margin-top:10px">'+(can('update')?'<button class="btn" onclick="addDefect()">+ Record defect</button>':'')+(can('officer')?'<button class="btn sec" onclick="sendDefRem()">Send reminder now</button>':'')+'</div></div>';
+  if(!ds.length) return h+'<div class="card muted">No defect recorded for this site.</div>';
+  ds.forEach(function(x){
+    var i=esc(x.id), btn='';
+    if(x.status==='Open'&&canRect()) btn+='<button class="btn small" onclick="rectDefect(\''+i+'\')">Mark as rectified</button> ';
+    if(x.status==='Rectified'&&can('update')) btn+='<button class="btn small" onclick="verDefect(\''+i+'\')">Verify / send back</button> ';
+    if((x.status==='Open'||x.status==='Rectified')&&can('approve')) btn+='<button class="btn small sec" onclick="cancelDefect(\''+i+'\')">Cancel entry</button>';
+    h+='<div class="card"><div class="row"><div><b>'+(x.code?esc(x.code)+' · ':'')+esc(x.severity)+'</b> · '+esc(x.category||'-')+'</div><div style="text-align:right"><span class="chip '+(DSTAT[x.status]||'grey')+'">'+(x.status==='Open'?'Rectification pending':esc(x.status))+'</span>'+(x.overdue>0?' <span class="chip red">'+x.overdue+' days overdue</span>':'')+'</div></div>'+
+     '<div style="margin-top:6px">'+esc(x.defect)+'</div>'+(x.details?'<div class="muted">'+esc(x.details)+'</div>':'')+
+     '<div class="muted">Recorded by '+esc(x.raisedBy)+' on '+esc(x.raisedAt)+' · Rectify by <b>'+dshow(x.due)+'</b>'+(x.reworkDays?' · Time lost about '+x.reworkDays+' days':'')+' · Reminders sent: '+x.reminders+(x.photo?' · <a href="'+esc(x.photo)+'" target="_blank">Photo</a>':'')+'</div>'+
+     (x.rectifiedOn?'<div class="muted">Rectified on '+dshow(x.rectifiedOn)+' by '+esc(x.rectifiedBy)+': '+esc(x.rectRemark)+'</div>':'')+
+     (x.verifiedBy?'<div class="muted">Checked by '+esc(x.verifiedBy)+' on '+esc(x.verifiedAt)+(x.verifyRemark?' - '+esc(x.verifyRemark):'')+'</div>':'')+
+     (btn?'<div style="margin-top:8px">'+btn+'</div>':'')+'</div>';
+  });
+  return h;
+}
+function addDefect(code){
+  var L=ST.boot.lists||{}, jobs=(ST.site.jobs||[]).filter(function(j){ return !j.st.external; });
+  modal('<h2>Record defective work</h2>'+
+   '<label>Work No. (optional)</label><select id="dc"><option value="">-- not specific --</option>'+jobs.map(function(j){ return '<option value="'+esc(j.code)+'"'+(j.code===code?' selected':'')+'>'+esc(j.code)+' - '+esc(String(j.description).slice(0,50))+'</option>'; }).join('')+'</select>'+
+   '<label>Type of defect</label><select id="dk"><option value="">-- select --</option>'+(L['Defect Category']||[]).map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('')+'</select>'+
+   '<div class="row"><div><label>Severity</label><select id="ds"><option>Minor</option><option>Major</option><option>Critical</option></select></div><div><label>Rectify by (blank = default for severity)</label><input type="date" id="dd"></div></div>'+
+   '<label>Defect - what is wrong</label><textarea id="dt"></textarea>'+
+   '<label>Exact location / details</label><input id="dl">'+
+   '<div class="row"><div><label>Time lost due to this (days, if known)</label><input type="number" min="0" id="dr"></div><div><label>Photo link (optional)</label><input id="dp" placeholder="https://..."></div></div>'+
+   '<div id="de" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" onclick="saveDefect()">Save and inform contractor</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function saveDefect(){
+  api('apiAddDefect',ST.token,ST.siteId,{code:v('dc'),category:v('dk'),severity:v('ds'),due:v('dd'),defect:v('dt'),details:v('dl'),reworkDays:v('dr'),photo:v('dp')})
+   .then(function(d){ closeModal(); ST.tab='defects'; refreshSite(d); toast('Defect recorded. Contractor will be reminded until rectified.'); }).catch(function(e){ showErr('de',e); });
+}
+function rectDefect(id){
+  modal('<h2>Mark defect as rectified</h2><p class="muted">Write what was done. The TPI / officer will check at site and close it. Reminders continue until it is verified.</p>'+
+   '<label>Rectification done</label><textarea id="rr"></textarea><label>Photo link (optional)</label><input id="rp" placeholder="https://...">'+
+   '<div id="re" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" onclick="doRect(\''+esc(id)+'\')">Submit</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function doRect(id){ api('apiRectifyDefect',ST.token,id,v('rr'),v('rp')).then(function(d){ closeModal(); refreshSite(d); toast('Marked as rectified. Sent for verification.'); }).catch(function(e){ showErr('re',e); }); }
+function verDefect(id){
+  modal('<h2>Verify rectification</h2><p class="muted">Accept only after checking the rectified work at site.</p><label>Remark</label><textarea id="vr"></textarea>'+
+   '<label>If sending back: new rectify-by date (blank = default)</label><input type="date" id="vd"><div id="ve" class="err"></div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn" onclick="doVer(\''+esc(id)+'\',\'close\')">Accept and close</button><button class="btn sec" style="color:var(--red);border-color:var(--red)" onclick="doVer(\''+esc(id)+'\',\'reject\')">Not accepted - send back</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function doVer(id,act){ api('apiVerifyDefect',ST.token,id,act,v('vr'),v('vd')).then(function(d){ closeModal(); refreshSite(d); toast(act==='close'?'Defect closed':'Sent back to contractor'); }).catch(function(e){ showErr('ve',e); }); }
+function cancelDefect(id){
+  modal('<h2>Cancel defect entry</h2><p class="muted">Use only if the entry was made by mistake. Reminders stop.</p><label>Reason</label><textarea id="vr"></textarea><div id="ve" class="err"></div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn" onclick="doVer(\''+esc(id)+'\',\'cancel\')">Cancel entry</button><button class="btn sec" onclick="closeModal()">Back</button></div>');
+}
+function sendDefRem(){ if(!confirm('Send defect reminder to the contractor now?')) return; api('apiSendDefectReminder',ST.token,ST.siteId).then(function(m){ toast(m); openSite(ST.siteId); }).catch(function(e){ toast(e.message); }); }
+
+ 
+function tChart(d){
+  var s=d.site, start=dnum(s['Start Date']), jobs=d.jobs, today=dnum(ST.boot.today);
+  var maxD=Math.max(+s['Contract Days']||105, (dnum(d.sm.forecastFinish)||0)-start+1, today-start+1)+3;
+  jobs.forEach(function(j){ var a=dnum(j.actualFinish); if(a) maxD=Math.max(maxD,a-start+4); });
+  var W=7, L=(window.innerWidth<600?150:230), rowH=22, H=40+jobs.length*rowH, Wt=L+maxD*W+10;
+  var x=function(n){ return L+(n-start)*W; };
+  var svg='<svg width="'+Wt+'" height="'+H+'" style="font-family:Arial;font-size:11px">';
+  for(var w=0; w*7<maxD; w++){ svg+='<rect x="'+(L+w*7*W)+'" y="0" width="'+(7*W)+'" height="'+H+'" fill="'+(w%2?'#f7f8fb':'#fff')+'"/><text x="'+(L+w*7*W+2)+'" y="14" fill="#667085">W'+(w+1)+'</text>'; }
+  var ce=dnum(s['Contract End']), ne=dnum(s['New End Date']);
+  if(ce) svg+='<line x1="'+(x(ce)+W)+'" x2="'+(x(ce)+W)+'" y1="20" y2="'+H+'" stroke="#f37022" stroke-width="2"/><text x="'+(x(ce)+W+2)+'" y="30" fill="#f37022">Contract end</text>';
+  if(ne&&ne!==ce) svg+='<line x1="'+(x(ne)+W)+'" x2="'+(x(ne)+W)+'" y1="20" y2="'+H+'" stroke="#7030a0" stroke-dasharray="4"/>';
+  jobs.forEach(function(j,i){
+    var y=36+i*rowH, ps=dnum(j.planStart), pf=dnum(j.planFinish), st=j.st;
+    svg+='<text x="4" y="'+(y+12)+'" fill="#1d2433">'+esc(j.code)+' '+esc(String(j.description).slice(0,(window.innerWidth<600?20:32)))+'</text>';
+    if(st.external){ svg+='<rect x="'+(x(pf)+1)+'" y="'+(y+3)+'" width="10" height="10" transform="rotate(45 '+(x(pf)+6)+' '+(y+8)+')" fill="'+(j.actualFinish?'#2e7d32':'#7030a0')+'"/>'; return; }
+    if(+j.days===0) return;
+    svg+='<rect x="'+x(ps)+'" y="'+(y+2)+'" width="'+((pf-ps+1)*W)+'" height="7" fill="#9dc3e6" rx="2"/>';
+    var as=dnum(j.actualStart);
+    if(as){ var ae=dnum(j.actualFinish)||today; var col=st.delay>0?(st.impact>0?'#c00000':'#b26a00'):'#2e7d32';
+      svg+='<rect x="'+x(as)+'" y="'+(y+10)+'" width="'+(Math.max(1,ae-as+1)*W)+'" height="7" fill="'+col+'" rx="2"/>'; }
+    else if(st.delay>0){ svg+='<text x="'+(x(ps))+'" y="'+(y+18)+'" fill="#c00000" font-size="9">not started</text>'; }
+  });
+  if(today>=start) svg+='<line x1="'+(x(today)+W/2)+'" x2="'+(x(today)+W/2)+'" y1="20" y2="'+H+'" stroke="#e1b000" stroke-width="2"/><text x="'+(x(today)+4)+'" y="'+(H-4)+'" fill="#a07c00">Today</text>';
+  svg+='</svg>';
+  return '<div class="card"><div class="legend"><span><i style="background:#9dc3e6"></i>Planned</span><span><i style="background:#2e7d32"></i>Actual - on time</span><span><i style="background:#b26a00"></i>Actual - late (has spare days)</span><span><i style="background:#c00000"></i>Actual - late, delays project</span><span><i style="background:#7030a0"></i>IOCL / LOI Holder item</span><span><i style="background:#e1b000"></i>Today</span></div>'+
+   '<div class="scroll" style="margin-top:8px">'+svg+'</div></div>';
+}
+
+ 
+function tHind(d){
+  var L=ST.boot.lists||{};
+  var h='<div class="card"><h3 style="margin-top:0">What is a hindrance?</h3><div class="muted">A problem that stopped work and was NOT in the contractor\'s control (e.g. IOCL drawing late, LOI Holder work pending, heavy rain, local issue). TPI / officers enter it with exact dates. Admin checks and approves. Approved days are used for time extension.</div>';
+  if(can('update')) h+='<div style="margin-top:10px"><button class="btn" onclick="addHind()">+ Enter hindrance</button></div>';
+  h+='</div>';
+  if(!d.hind.length) h+='<div class="card muted">No hindrance entered.</div>';
+  d.hind.slice().reverse().forEach(function(x){
+    var col=x.status==='Approved'?'green':x.status==='Rejected'?'red':'amber';
+    h+='<div class="card"><div class="row"><div><b>'+dshow(x.from)+' to '+dshow(x.to)+'</b> ('+x.days+' days) · '+esc(x.cause)+'</div><div style="text-align:right"><span class="chip '+col+'">'+esc(x.status)+'</span></div></div>'+
+       '<div style="margin-top:6px">'+esc(x.details)+'</div><div class="muted">Work affected: '+esc(x.codes||'-')+' · Entered by '+esc(x.enteredBy)+' on '+esc(x.enteredAt)+'</div>'+
+       (x.approvals?'<div class="muted">Reviewed: '+esc(x.approvals)+(x.approvedDays?' · Approved '+dshow(x.approvedFrom)+' to '+dshow(x.approvedTo)+' ('+x.approvedDays+' days)':'')+(x.reviewRemark?' · '+esc(x.reviewRemark):'')+'</div>':'')+
+       (can('approve')&&x.status==='Pending'?'<div style="margin-top:8px"><button class="btn small" onclick="reviewHind(\''+esc(x.id)+'\')">Review</button></div>':'')+'</div>';
+  });
+  return h;
+}
+function addHind(){
+  var L=ST.boot.lists||{};
+  modal('<h2>Enter hindrance</h2><div class="row"><div><label>From date</label><input type="date" id="hf"></div><div><label>To date</label><input type="date" id="ht"></div></div>'+
+   '<label>Cause</label><select id="hc"><option value="">-- select --</option>'+(L['Hindrance Cause']||[]).map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('')+'</select>'+
+   '<label>Work affected (Work Nos, e.g. T1, B2)</label><input id="hw">'+
+   '<label>Details - what happened, who was informed, any letter / e-mail reference</label><textarea id="hd"></textarea>'+
+   '<div id="he" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" onclick="saveHind()">Submit for approval</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function saveHind(){ api('apiAddHindrance',ST.token,ST.siteId,{from:v('hf'),to:v('ht'),cause:v('hc'),codes:v('hw'),details:v('hd')}).then(function(d){ closeModal(); refreshSite(d); toast('Sent to admin for approval'); }).catch(function(e){ showErr('he',e); }); }
+function reviewHind(id){
+  var x=ST.site.hind.filter(function(h){ return h.id===id; })[0];
+  modal('<h2>Review hindrance</h2><p>'+esc(x.cause)+': '+esc(x.details)+'</p><div class="muted">Asked: '+dshow(x.from)+' to '+dshow(x.to)+' ('+x.days+' days)</div>'+
+   '<p class="muted">You may reduce the dates if only part is justified.</p><div class="row"><div><label>Approve from</label><input type="date" id="rf" value="'+esc(x.from)+'"></div><div><label>Approve to</label><input type="date" id="rt" value="'+esc(x.to)+'"></div></div>'+
+   '<label>Remark</label><textarea id="rr"></textarea><div id="re" class="err"></div>'+
+   '<div class="row" style="margin-top:12px"><button class="btn" onclick="doReview(\''+esc(id)+'\',\'approve\')">Approve</button><button class="btn sec" style="color:var(--red);border-color:var(--red)" onclick="doReview(\''+esc(id)+'\',\'reject\')">Reject</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function doReview(id,act){ api('apiReviewHindrance',ST.token,id,act,v('rf'),v('rt'),v('rr')).then(function(d){ closeModal(); refreshSite(d); toast('Done'); }).catch(function(e){ showErr('re',e); }); }
+
+ 
+function tPhotos(d){
+  if(!d.photos.length) return '<div class="card muted">No photos yet. Open any work in "Work list" and use "Add photo". Photos are optional.</div>';
+  return '<div class="photos">'+d.photos.map(function(p){
+    var img=p.id?'<img loading="lazy" src="https://drive.google.com/thumbnail?id='+encodeURIComponent(p.id)+'&sz=w400" onerror="this.style.display=\'none\'">':'';
+    return '<a class="p" href="'+esc(p.link||('https://drive.google.com/file/d/'+p.id+'/view'))+'" target="_blank" style="text-decoration:none;color:inherit">'+img+'<div><b>'+esc(p.code)+'</b> '+esc(p.caption||'')+'<br><span class="muted">'+esc(p.time)+'<br>'+esc(p.user)+'</span></div></a>'; }).join('')+'</div>';
+}
+function tHistory(d){
+  var h='<div class="card"><h3 style="margin-top:0">Recent updates</h3>'+(d.log.length?'<div class="scroll"><table><tr><th>Time</th><th>No.</th><th>By</th><th>What changed</th></tr>'+d.log.map(function(l){ return '<tr><td>'+esc(l.time)+'</td><td>'+esc(l.code)+'</td><td>'+esc(l.user)+'</td><td>'+esc(l.what)+'</td></tr>'; }).join('')+'</table></div>':'<div class="muted">None</div>')+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Reminders sent</h3>'+(d.alerts.length?'<div class="scroll"><table><tr><th>Time</th><th>Level</th><th>To</th><th>Subject</th></tr>'+d.alerts.map(function(a){ return '<tr><td>'+esc(a.time)+'</td><td>'+esc(a.level)+'</td><td>'+esc(a.to)+'</td><td>'+esc(a.subject)+'</td></tr>'; }).join('')+'</table></div>':'<div class="muted">None</div>')+'</div>';
+  return h;
+}
+
+ 
+var FIELDS=[['RO Name','text'],['Location','text'],['Divisional Office','text'],['Tender No','text'],['Vendor Code','text'],['Contractor Name','text'],
+ ['Contractor Email','email'],['Contractor WhatsApp','tel'],['PO No','text'],['PO Amount','number'],['PO Date','date'],['Handover Date','date'],
+ ['Start Date Override','date'],['Contract Days','number'],['Engineer-in-Charge Email','email'],['TPI Email','text'],['Officer Emails','text'],['Work Done Value','number']];
+var HINTS={'PO Date':'PO / commencement order date. Start date = this + 10 days','Handover Date':'Fill only if site was handed over earlier','Start Date Override':'Fill only if Engineer-in-Charge fixes a different start date',
+ 'TPI Email':'More than one: separate by comma','Officer Emails':'SREH, SRH etc. - get copy of serious reminders','Work Done Value':'Value of work done till last RA bill (for price discount estimate)'};
+var STD=['Site ID','RO Name','Location','Divisional Office','Tender No','Vendor Code','Contractor Name','Contractor Email','Contractor WhatsApp','PO No','PO Amount','PO Date','Handover Date','Start Date','Contract Days','Contract End','Approved Extra Days','New End Date','Plan Finish','Engineer-in-Charge Email','TPI Email','Officer Emails','Work Done Value','Status','Plan Locked','Created By','Created At'];
+function siteForm(s){
+  s=s||{};
+  var extra=(ST.boot.siteFields||[]).filter(function(f){ return STD.indexOf(f)<0; });
+  return FIELDS.concat(extra.map(function(f){ return [f,'text']; })).map(function(f){
+    var val=f[0]==='Start Date Override'?'':(s[f[0]]===undefined?'':s[f[0]]);
+    if(f[0]==='Contract Days'&&val==='') val=(ST.boot.settings&&ST.boot.settings.contractDays)||105;
+    return '<label>'+esc(f[0])+(HINTS[f[0]]?' <span class="muted">- '+esc(HINTS[f[0]])+'</span>':'')+'</label><input data-f="'+esc(f[0])+'" type="'+f[1]+'" value="'+esc(val)+'">'; }).join('');
+}
+function readForm(box){ var o={}; box.querySelectorAll('[data-f]').forEach(function(i){ o[i.getAttribute('data-f')]=i.value; }); return o; }
+function editSite(s){
+  modal('<h2>'+(s?'Edit site details':'New site')+'</h2><div id="sf">'+siteForm(s)+'</div><div id="se" class="err"></div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn" onclick="saveSite('+(s?'\''+esc(s['Site ID'])+'\'':'null')+')">Save</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>'+
+    (s?'':'<p class="muted">The work list and planned dates are made automatically from the WORK TEMPLATE sheet. Check them in "Site settings" and then lock the plan.</p>'));
+}
+function saveSite(id){
+  var o=readForm($('sf')); if(id) o['Site ID']=id;
+  api('apiSaveSite',ST.token,o).then(function(newId){ closeModal(); toast('Saved'); ST.tab=id?'admin':'summary'; api('apiBoot',ST.token).then(function(b){ ST.boot=b; openSite(newId); }); }).catch(function(e){ showErr('se',e); });
+}
+function tAdmin(d){
+  var s=d.site, locked=String(s['Plan Locked']).toUpperCase()==='YES';
+  var h='<div class="card"><h3 style="margin-top:0">Site details</h3><div class="muted">Start: '+dshow(s['Start Date'])+' · Contract end: '+dshow(s['Contract End'])+' · Plan finish: '+dshow(s['Plan Finish'])+' · Status: '+esc(s['Status'])+'</div>';
+  Object.keys(d.extra||{}).forEach(function(k){ h+='<div class="muted">'+esc(k)+': '+esc(d.extra[k])+'</div>'; });
+  h+='<div style="margin-top:8px"><button class="btn sec" onclick="editSite(ST.site.site)">Edit details</button></div></div>';
+  if(can('admin')){
+    h+='<div class="card"><h3 style="margin-top:0">Plan (bar chart) - '+(locked?'<span style="color:var(--green)">APPROVED & LOCKED</span>':'<span style="color:var(--amber)">NOT LOCKED</span>')+'</h3>';
+    if(!locked){
+      h+='<div class="muted">Change days, "starts after" (e.g. T5+7, F1) or share %. Then Save. When the contractor\'s bar chart is agreed, click "Approve & lock plan". Reminders start only after locking.</div><div class="scroll"><table id="pt"><tr><th>No.</th><th>Work</th><th>Days</th><th>Starts after</th><th>Needed by day</th><th>Share %</th><th>Plan</th></tr>'+
+        d.jobs.map(function(j){ return '<tr data-c="'+esc(j.code)+'"><td>'+esc(j.code)+'</td><td>'+esc(j.description)+'</td><td><input style="width:60px" data-k="days" type="number" value="'+j.days+'"></td><td><input style="width:120px" data-k="after" value="'+esc(j.after||'')+'"></td><td><input style="width:60px" data-k="neededBy" value="'+esc(j.neededBy===undefined?'':j.neededBy)+'"></td><td><input style="width:60px" data-k="share" type="number" step="0.01" value="'+j.share+'"></td><td class="muted">'+dshow(j.planStart)+' - '+dshow(j.planFinish)+'</td></tr>'; }).join('')+
+        '</table></div><div id="pe" class="err"></div><div class="row" style="margin-top:10px"><button class="btn sec" onclick="savePlan()">Save plan changes</button><button class="btn" onclick="lockPlan(true)">Approve & lock plan</button></div>';
+    } else h+='<div class="muted">Plan is locked. Planned dates cannot change. To revise (e.g. after approved extension), unlock with a reason - it is recorded in history.</div><div style="margin-top:8px"><button class="btn sec" onclick="lockPlan(false)">Unlock plan</button></div>';
+    h+='</div>';
+    h+='<div class="card"><h3 style="margin-top:0">Time extension</h3><div class="muted">Approved hindrance days (overlaps counted once): <b>'+d.sm.hindranceDays+'</b>. Present extension: <b>'+(s['Approved Extra Days']||0)+' days</b>, last date <b>'+dshow(s['New End Date'])+'</b>.</div>'+
+       '<div class="row"><div><label>Approved extra days</label><input id="xd" type="number" min="0" value="'+(s['Approved Extra Days']||0)+'"></div><div style="flex:2"><label>Approval reference / remark</label><input id="xr"></div></div><div id="xe" class="err"></div>'+
+       '<div style="margin-top:10px"><button class="btn" onclick="saveExtra()">Save extension</button></div></div>';
+    h+='<div class="card"><h3 style="margin-top:0">Site status</h3><div class="row">'+['Active','On hold','Completed'].map(function(x){ return '<button class="btn '+(s['Status']===x?'':'sec')+'" onclick="setStatus(\''+x+'\')">'+x+'</button>'; }).join('')+'</div><div class="muted">Reminders go only for Active sites.</div></div>';
+  }
+  return h;
+}
+function savePlan(){
+  var rows=[]; document.querySelectorAll('#pt tr[data-c]').forEach(function(tr){ var o={code:tr.getAttribute('data-c')}; tr.querySelectorAll('[data-k]').forEach(function(i){ o[i.getAttribute('data-k')]=i.value; }); rows.push(o); });
+  api('apiEditPlan',ST.token,ST.siteId,rows).then(function(d){ refreshSite(d); toast('Plan saved. Plan finish: '+dshow(d.site['Plan Finish'])); }).catch(function(e){ showErr('pe',e); });
+}
+function lockPlan(on){
+  var reason=''; if(!on){ reason=prompt('Reason for unlocking the plan:'); if(!reason) return; } else if(!confirm('Approve and lock this plan? Planned dates will not change after this.')) return;
+  api('apiLock',ST.token,ST.siteId,on,reason).then(function(d){ refreshSite(d); toast(on?'Plan locked':'Plan unlocked'); }).catch(function(e){ toast(e.message); });
+}
+function saveExtra(){ api('apiExtraDays',ST.token,ST.siteId,v('xd'),v('xr')).then(function(d){ refreshSite(d); toast('Extension saved'); }).catch(function(e){ showErr('xe',e); }); }
+function setStatus(x){ api('apiSetStatus',ST.token,ST.siteId,x).then(function(){ openSite(ST.siteId); }).catch(function(e){ toast(e.message); }); }
+
+ 
+function usersView(){
+  api('apiUsers',ST.token).then(function(us){
+    var h='<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Users</h3><div style="text-align:right"><button class="btn" onclick="editUser(null)">+ Add user</button></div></div>'+
+      '<div class="muted" style="margin-top:6px">ADMIN = everything incl. approvals · OFFICER = Site Engineer / Engineer-in-Charge / SREH / SRH - sees sites, edits details, sends reminders · TPI = updates progress, dates, delay reasons, photos, hindrances · CONTRACTOR = can only see own site.<br>Sites: "ALL" or Site IDs like S001, S004. A user named as TPI / Engineer-in-Charge / Officer e-mail in a site sees that site anyway.</div>'+
+      '<div class="scroll" style="margin-top:8px"><table><tr><th>Name</th><th>E-mail</th><th>Role</th><th>Designation</th><th>Sites</th><th>Active</th><th></th></tr>'+
+      us.map(function(u,i){ return '<tr><td>'+esc(u.name)+'</td><td>'+esc(u.email)+'</td><td>'+esc(u.role)+'</td><td>'+esc(u.designation)+'</td><td>'+esc(u.sites)+'</td><td>'+esc(u.active)+'</td><td><button class="btn small sec" onclick=\'editUser('+JSON.stringify(u).replace(/'/g,"&#39;")+')\'>Edit</button> <button class="btn small sec" onclick="resetPin(\''+esc(u.email)+'\')">New PIN</button></td></tr>'; }).join('')+'</table></div></div>';
+    shell('Users','RO-PACE admin',h,'home()');
+  }).catch(function(e){ toast(e.message); });
+}
+function editUser(u){
+  u=u||{}; var L=ST.boot.lists||{};
+  modal('<h2>'+(u.email?'Edit user':'Add user')+'</h2><label>E-mail</label><input id="ue" value="'+esc(u.email||'')+'"'+(u.email?' disabled':'')+'><label>Name</label><input id="un" value="'+esc(u.name||'')+'">'+
+   '<label>Role</label><select id="ur">'+['TPI','OFFICER','ADMIN','CONTRACTOR'].map(function(r){ return '<option'+(r===u.role?' selected':'')+'>'+r+'</option>'; }).join('')+'</select>'+
+   '<label>Designation</label><select id="ud"><option></option>'+(L['Designation']||[]).map(function(r){ return '<option'+(r===u.designation?' selected':'')+'>'+esc(r)+'</option>'; }).join('')+'</select>'+
+   '<label>Sites (ALL, or Site IDs separated by comma)</label><input id="us" value="'+esc(u.sites||'')+'"><label>Mobile</label><input id="um" value="'+esc(u.mobile||'')+'">'+
+   '<label>Active</label><select id="ua"><option'+(u.active==='NO'?'':' selected')+'>YES</option><option'+(u.active==='NO'?' selected':'')+'>NO</option></select>'+
+   '<div id="ux" class="err"></div><div class="row" style="margin-top:12px"><button class="btn" onclick="saveUser()">Save</button><button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function saveUser(){
+  api('apiSaveUser',ST.token,{email:v('ue'),name:v('un'),role:v('ur'),designation:v('ud'),sites:v('us'),mobile:v('um'),active:v('ua')}).then(function(r){
+    closeModal(); if(r&&r.pin) alert('User added. PIN: '+r.pin+'\n(It has also been e-mailed to the user.)'); usersView(); }).catch(function(e){ showErr('ux',e); });
+}
+function resetPin(email){ if(!confirm('Make a new PIN for '+email+'?')) return; api('apiResetPin',ST.token,email).then(function(r){ alert('New PIN for '+email+': '+r.pin+'\n(Also e-mailed.)'); }).catch(function(e){ toast(e.message); }); }
+
+ 
+if(ST.token) home(); else viewLogin();
+</script>
+</body>
+</html>

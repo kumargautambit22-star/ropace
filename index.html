@@ -66,6 +66,29 @@ textarea{min-height:70px}
 .legend i{width:14px;height:8px;display:inline-block;border-radius:2px}
 .login{max-width:380px;margin:40px auto}
 .pre{white-space:pre-wrap;background:#f6f7f9;border:1px solid var(--line);padding:10px;border-radius:6px;font-size:13px;max-height:300px;overflow:auto}
+
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#e9eef7 0,#f5f7fb 260px) fixed}
+header{background:linear-gradient(100deg,#13264d 0,#1f3864 55%,#2a4d8f 100%);box-shadow:0 3px 14px #13264d55;border-bottom:3px solid var(--orange);padding:10px 18px}
+header img.logo{height:40px;background:#fff;border-radius:8px;padding:3px;margin-right:2px}
+header .t{letter-spacing:.3px}
+.card{border-radius:14px;box-shadow:0 2px 14px #1f386414;border:1px solid #e8ecf3}
+.kpi{border-radius:14px;border:1px solid #e8ecf3;border-top:3px solid var(--orange);box-shadow:0 2px 10px #1f386410}
+.tabs{border-bottom:2px solid #dde3ee}
+.tabs button{border-radius:8px 8px 0 0;transition:background .15s}
+.tabs button:hover{background:#eaf0fa}
+.btn{border-radius:9px;box-shadow:0 1px 4px #0002;transition:filter .15s,transform .15s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+th{background:linear-gradient(#2a4d8f,#1f3864)}
+tbody tr:nth-child(even) td,table tr:nth-child(even) td{background:#fafbfe}
+.login{max-width:410px;margin:48px auto;padding:22px;border-top:4px solid var(--orange)}
+footer.site{max-width:1100px;margin:0 auto;padding:6px 16px 28px;text-align:center;font-size:12px;color:var(--mute)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.mis h3{border-bottom:2px solid var(--orange);padding-bottom:4px;margin-top:18px}
+.mis table td,.mis table th{font-size:12px}
+.printhead{display:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
+@page{size:A4 landscape;margin:10mm}
+@media print{header,.tabs,.noprint,.toolbar,.toast,footer.site,.modal{display:none!important}body{background:#fff!important}main{max-width:none!important;padding:0!important}.card{box-shadow:none!important;border:1px solid #cfd6e3!important;break-inside:avoid}.scroll{overflow:visible!important}.scroll svg{max-width:100%!important;height:auto!important}.printhead{display:block;margin-bottom:8px;border-bottom:3px solid #f37022;padding-bottom:4px}}
 </style>
 </head>
 <body>
@@ -124,7 +147,7 @@ function showErr(id,e){ var el=$(id); if(el) el.textContent=e.message||e; else t
 /* ============ login ============ */
 function viewLogin(msg){
   $('app').innerHTML='<header><div class="t">RO-PACE<small>Site RO Work Monitoring</small></div></header>'+
-  '<main><div class="card login"><h2>Log in</h2>'+
+  '<main><div class="card login"><div style="text-align:center;margin-bottom:8px"><img src="logo.png" alt="" onerror="this.remove()" style="height:60px;margin-bottom:6px"><div style="font-size:28px;font-weight:bold;color:var(--navy);letter-spacing:1.5px">RO-PACE</div><div class="muted">Site RO Work Monitoring &middot; Begusarai Divisional Office</div></div><h2>Log in</h2>'+
   '<label>E-mail</label><input id="em" type="email" autocomplete="username">'+
   '<label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password">'+
   '<div style="margin-top:14px"><button class="btn" id="lb" onclick="doLogin()" style="width:100%">Log in</button></div>'+
@@ -144,8 +167,70 @@ function logout(expired){
 }
 function shell(title, sub, body, back){
   $('app').innerHTML='<header>'+(back?'<button onclick="'+back+'">&larr;</button>':'')+
-   '<div class="t">'+esc(title)+'<small>'+esc(sub||'')+'</small></div>'+
-   '<button onclick="logout()">Log out</button></header><main>'+body+'</main>';
+   '<img class="logo" src="logo.png" alt="" onerror="this.remove()"><div class="t">'+esc(title)+'<small>'+esc(sub||'')+'</small></div>'+
+   '<button onclick="logout()">Log out</button></header><main>'+body+'</main><footer class="site">Indian Oil Corporation Limited &middot; Marketing Division &middot; Begusarai Divisional Office &middot; RO-PACE</footer>';
+}
+
+/* ===== MIS report ===== */
+function misTable(rows,heads){
+  return '<div class="scroll"><table><tr>'+heads.map(function(x){return '<th>'+x+'</th>';}).join('')+'</tr>'+rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';}).join('')+'</table></div>';
+}
+function misEffect(sm){
+  if(sm.beyondEnd>0) return '<b style="color:var(--red)">At the present pace the work will finish on '+dshow(sm.forecastFinish)+', which is '+sm.beyondEnd+' day(s) AFTER the contractual completion date of '+dshow(sm.newEnd)+'.</b> Delay damages / price discount may apply as per contract unless the delay is covered by approved hindrances.';
+  return '<b style="color:var(--green)">At the present pace the work will finish on '+dshow(sm.forecastFinish)+', within the contractual completion date of '+dshow(sm.newEnd)+'.</b>';
+}
+function misBody(d){
+  var s=d.site, sm=d.sm, jobs=d.jobs.filter(function(j){ return j.st.external||+j.days>0; });
+  var late=jobs.filter(function(j){ return j.st.delay>0; }).sort(function(a,b){ return b.st.delay-a.st.delay; });
+  var off=can('officer');
+  var tp=[s['TPI Email']].concat([]).filter(String).join(', ');
+  var info=[['Name of work',s['RO Name']],['Location',s['Location']],['Divisional office',s['Divisional Office']],['Tender no.',s['Tender No']],['PO no. / date',(s['PO No']||'-')+' / '+dshow(s['PO Date'])],
+   ['PO value',s['PO Amount']?money(s['PO Amount']):'-'],['Contractor',(s['Contractor Name']||'-')+(s['Vendor Code']?' (Vendor code '+s['Vendor Code']+')':'')],['Start date',dshow(s['Start Date'])],
+   ['Contract period',(s['Contract Days']||'-')+' days'+(+s['Approved Extra Days']?' + '+s['Approved Extra Days']+' days extension':'')],['Contractual completion date',dshow(sm.newEnd)],
+   ['Expected finish (present pace)',dshow(sm.forecastFinish)],['Days beyond contractual date',sm.beyondEnd>0?'<b style="color:var(--red)">'+sm.beyondEnd+'</b>':'0'],
+   ['Planned progress',sm.plannedPct+'%'],['Actual progress',sm.actualPct+'%'],['Engineer-in-charge',s['Engineer-in-Charge Email']||'-'],['TPI',tp||'-'],['Report date',dshow(ST.boot.today)]];
+  var h='<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Project Progress Report (MIS) - '+esc(s['RO Name'])+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Project progress report</h3><div class="grid2">'+info.map(function(r){ return '<div style="padding:3px 0;border-bottom:1px dotted #d5dbe7"><span class="muted">'+r[0]+':</span> <b>'+(r[1]===undefined||r[1]===''?'-':(typeof r[1]==='string'&&r[1].indexOf('<')===0?r[1]:esc(r[1])))+'</b></div>'; }).join('')+'</div></div>';
+  h+='<div class="card" style="border-left:5px solid '+(sm.health==='Red'?'var(--red)':sm.health==='Amber'?'var(--amber)':'var(--green)')+'"><h3 style="margin-top:0">Effect of present progress on the contractual completion date</h3><p>'+misEffect(sm)+'</p>'+
+    '<p class="muted">Site status: <span class="chip '+sm.health+'">'+sm.health.toUpperCase()+'</span> &middot; '+sm.lateCount+' activities delayed &middot; behind running plan by '+sm.slip+' day(s)'+(+sm.hindranceDays?' &middot; approved hindrance days '+sm.hindranceDays:'')+'</p></div>';
+  h+='<div class="card"><h3 style="margin-top:0">Delayed activities ('+late.length+')</h3>'+(late.length?misTable(late.map(function(j){
+    return ['<b>'+esc(j.code)+'</b>',esc(j.description),'<b style="color:var(--red)">'+j.st.delay+'</b>',j.st.impact>0?'<b style="color:var(--red)">'+j.st.impact+' d</b>':'None',esc(j.delayReason||'-'),esc(j.st.status)];
+  }),['No.','Activity','Days delayed','Delays whole project by','Reason','Status']):'<p class="ok">No activity is delayed.</p>')+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Present status of all activities</h3>'+misTable(jobs.map(function(j){
+    return ['<b>'+esc(j.code)+'</b>',esc(j.description),dshow(j.planStart)+' to '+dshow(j.planFinish),j.actualStart?dshow(j.actualStart):'-',j.actualFinish?dshow(j.actualFinish):'-',(j.st.pct!=null?j.st.pct:0)+'%',j.st.delay>0?'<b style="color:var(--red)">'+j.st.delay+'</b>':'0',esc(j.st.status)];
+  }),['No.','Activity','Planned','Actual start','Actual finish','Done','Days delayed','Status'])+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Bar chart</h3>'+ganttLegend()+'<div class="scroll" style="margin-top:8px">'+ganttSvg(d)+'</div></div>';
+  var df=d.defects||[], op=df.filter(function(x){return x.status==='Open';}).length;
+  h+='<div class="card"><h3 style="margin-top:0">Hindrances and defects</h3><p>Hindrances recorded: <b>'+(d.hind||[]).length+'</b> (approved days: <b>'+(sm.hindranceDays||0)+'</b>, pending approval: <b>'+(sm.pendingHindrances||0)+'</b>)<br>Defective work: <b>'+df.length+'</b> recorded, <b>'+op+'</b> still open</p></div>';
+  return h;
+}
+function tMis(d){
+  var h='<div class="toolbar noprint"><button class="btn" onclick="misXls()">Download Excel</button><button class="btn sec" onclick="window.print()">Print / Save as PDF</button></div><div class="mis" id="misdoc">'+misBody(d)+'</div>';
+  return h;
+}
+function xlsSave(html,name){
+  var doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><style>td,th{border:1px solid #999;padding:3px;font-family:Arial;font-size:11px}th{background:#1f3864;color:#fff}</style></head><body>'+html+'</body></html>';
+  var b=new Blob(['﻿'+doc],{type:'application/vnd.ms-excel'}), a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+}
+function misXls(){
+  var el=document.getElementById('misdoc').cloneNode(true);
+  [].forEach.call(el.querySelectorAll('svg,.legend,.printhead,.chip'),function(n){ if(n.tagName==='svg'||n.className==='legend'||n.className==='printhead') n.remove(); });
+  xlsSave('<h2>'+esc(ST.site.site['RO Name'])+' - Project progress report</h2>'+el.innerHTML,'MIS_'+ST.site.site['Site ID']+'_'+ST.boot.today+'.xls');
+}
+/* all-sites MIS */
+function misAll(){
+  var b=ST.boot, S=b.sites.filter(function(x){ return x.status==='Active'; });
+  var rows=S.map(function(x){ var m=x.sm;
+    return ['<b>'+esc(x.id)+'</b>',esc(x.roName),esc(x.contractor||'-'),esc(x.tender||'-'),esc(x.po||'-'),x.poAmt?money(x.poAmt):'-',dshow(x.startDate),dshow(m.newEnd),dshow(m.forecastFinish),m.beyondEnd>0?'<b style="color:var(--red)">'+m.beyondEnd+'</b>':'0',m.plannedPct+'%',m.actualPct+'%',m.lateCount,'<span class="chip '+m.health+'">'+m.health.toUpperCase()+'</span>'];
+  });
+  var h='<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Contract-wise progress report (MIS)</div>';
+  h+='<div class="toolbar noprint"><button class="btn" onclick="xlsSave(document.getElementById(\'misdoc\').innerHTML.replace(/<svg[\\s\\S]*?<\\/svg>/g,\'\'),\'MIS_all_sites_\'+ST.boot.today+\'.xls\')">Download Excel</button><button class="btn sec" onclick="window.print()">Print / Save as PDF</button></div><div class="mis" id="misdoc">';
+  h+='<div class="card"><h3 style="margin-top:0">Contract-wise progress (as on '+dshow(b.today)+')</h3>'+misTable(rows,['Site','Name of work','Contractor','Tender','PO no.','PO value','Start','Contractual completion','Expected finish','Days beyond','Planned','Actual','Delayed activities','Status'])+'</div>';
+  var mx=Math.max.apply(null,S.map(function(x){return Math.max(x.sm.beyondEnd,0);}).concat([1]));
+  h+='<div class="card"><h3 style="margin-top:0">Days beyond contractual completion date</h3>'+S.map(function(x){ var v=Math.max(x.sm.beyondEnd,0); return '<div style="margin:6px 0"><div style="font-size:12px">'+esc(x.roName)+' - <b>'+v+' d</b></div><div style="background:#e8ecf3;border-radius:6px;height:14px"><div style="width:'+Math.round(v/mx*100)+'%;background:'+(v>0?'var(--red)':'var(--green)')+';height:14px;border-radius:6px;min-width:'+(v>0?4:0)+'px"></div></div></div>'; }).join('')+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Delayed activities by site</h3>'+S.map(function(x){ var m=x.sm; return '<p><b>'+esc(x.roName)+'</b>: '+m.lateCount+' delayed activit'+(m.lateCount===1?'y':'ies')+(m.late&&m.late.length?' - '+m.late.map(function(j){return esc(j.code)+' ('+j.delay+' d)';}).join(', '):'')+'</p>'; }).join('')+'<p class="muted">Open a site and its "MIS report" tab for the full activity-wise report.</p></div></div>';
+  shell('MIS report - all sites','Contract-wise progress',h,'home()');
 }
 
 /* ============ home: all sites ============ */
@@ -204,7 +289,7 @@ function renderHome(){
     kpi('<span style="color:var(--amber)">'+cnt.Amber+'</span>','AMBER: some delay, can still finish in time')+
     kpi('<span style="color:var(--green)">'+cnt.Green+'</span>','GREEN: on time')+
     (can('approve')?kpi(pend,'Hindrances waiting for approval'):'')+(can('officer')?kpi('<span style="color:var(--amber)">'+s.filter(function(x){return x.status==='Pending Approval';}).length+'</span>','Sites waiting for your approval'):'')+'</div>';
-  h+=homeDash(b.sites);
+  h+=homeDash(b.sites); h+='<div class="noprint" style="margin:8px 0"><button class="btn" onclick="misAll()">MIS report - all sites (download / print)</button></div>';
   h+='<div class="row" style="margin:12px 0;align-items:center"><div><select onchange="ST.homeFilter=this.value;renderHome()">'+
      ['Active','Pending Approval','Rejected','Completed','On hold','All'].map(function(o){ return '<option'+(o===filt?' selected':'')+'>'+o+'</option>'; }).join('')+'</select></div>'+
      '<div style="text-align:right;flex:2">'+(can('addsite')?'<button class="btn" onclick="editSite(null)">+ New site</button> ':'')+(can('admin')?'<button class="btn sec" onclick="usersView()">Users</button>':'')+'</div></div>';
@@ -229,13 +314,13 @@ function kpi(v,l){ return '<div class="kpi"><div class="v">'+v+'</div><div class
 /* ============ one site ============ */
 function openSite(id){ ST.siteId=id; ST.tab=ST.tab||'summary'; api('apiSite',ST.token,id).then(function(d){ ST.site=d; renderSite(); }).catch(function(e){ toast(e.message); }); }
 function refreshSite(d){ ST.site=d; renderSite(); }
-var TABS=[['summary','Summary'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['plan','Plan'],['admin','Site settings']];
+var TABS=[['summary','Summary'],['mis','MIS report'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['plan','Plan'],['admin','Site settings']];
 function renderSite(){
   var d=ST.site, s=d.site;
   var banner=s['Status']==='Pending Approval'?'<div class="card" style="border-left:5px solid var(--amber)"><b>This site is waiting for IOCL approval.</b> (added by '+esc(s['Created By']||'-')+')'+(can('officer')?'<div style="margin-top:8px"><button class="btn small" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'approve\')">Accept site</button> <button class="btn small sec" onclick="reviewSite(\''+esc(s['Site ID'])+'\',\'reject\')">Reject</button></div>':'<div class="muted">Updates can start after an IOCL officer accepts it.</div>')+'</div>':s['Status']==='Rejected'?'<div class="card" style="border-left:5px solid var(--red)"><b>This site was rejected.</b> See the History tab for the reason.</div>':'';
   banner+=planBanner(d);
-  var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]==='admin'?can('officer'):true; }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
-  var body={summary:tSummary,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,plan:tPlan,admin:tAdmin}[ST.tab]||tSummary;
+  var tabs='<div class="tabs">'+TABS.filter(function(t){ return t[0]==='admin'?can('officer'):((role()==='CONTRACTOR'&&t[0]==='history')?false:true); }).map(function(t){ return '<button class="'+(ST.tab===t[0]?'on':'')+'" onclick="ST.tab=\''+t[0]+'\';renderSite()">'+t[1]+'</button>'; }).join('')+'</div>';
+  var body={summary:tSummary,mis:tMis,work:tWork,chart:tChart,hind:tHind,defects:tDefects,photos:tPhotos,history:tHistory,plan:tPlan,admin:tAdmin}[ST.tab]||tSummary;
   shell(s['RO Name'], s['Site ID']+' · '+(s['Contractor Name']||''), banner+tabs+body(d), 'home()');
 }
 
@@ -373,10 +458,10 @@ function dash(d){
 function tSummary(d){
   var sm=d.sm, s=d.site;
   var h=dash(d);
-  if(sm.beyondEnd>0) h+='<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">Expected to finish '+sm.beyondEnd+' days after the contractual completion date.</b><br>'+
+  if(sm.beyondEnd>0 && can('officer')) h+='<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">Expected to finish '+sm.beyondEnd+' days after the contractual completion date.</b><br>'+
     'Price discount (0.5% per week): <b>'+sm.discount.pct+'%</b> = <b>'+money(sm.discount.amount)+'</b> on work done value '+money(s['Work Done Value'])+'<br>TPI cost recovery: <b>'+money(sm.tpiRecovery)+'</b><div class="muted">Estimate only. Final figure as per approved hindrances & contract.</div></div>';
   h+='<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Late work ('+sm.late.length+')</h3><div style="text-align:right;flex:2">'+
-     '<button class="btn wa small" onclick="waOpen()">WhatsApp message</button> <button class="btn sec small" onclick="waCopy()">Copy text</button> '+
+     (can('update')?'<button class="btn wa small" onclick="waOpen()">WhatsApp message</button> <button class="btn sec small" onclick="waCopy()">Copy text</button> ':'')+
      (can('officer')?'<button class="btn sec small" onclick="previewAlert()">Preview e-mail</button> <button class="btn small" onclick="sendAlert()">Send reminder now</button>':'')+'</div></div>';
   if(!sm.late.length) h+='<p class="ok">No work is late. Good progress.</p>';
   else h+='<div class="scroll"><table><tr><th>No.</th><th>Work</th><th>Days late</th><th>Delays whole project?</th><th>Status</th></tr>'+
@@ -461,7 +546,7 @@ function photoLink(i){
 function savePhotoLink(code){ api('apiAddPhotoLink',ST.token,ST.siteId,code,v('pl'),v('pc')).then(function(d){ closeModal(); refreshSite(d); toast('Photo link saved'); }).catch(function(e){ showErr('pe',e); }); }
 
 /* ---- defects (defective work) ---- */
-function canRect(){ var r=role(); return r==='ADMIN'||r==='OFFICER'||r==='TPI'||r==='CONTRACTOR'; }
+function canRect(){ var r=role(); return r==='ADMIN'||r==='OFFICER'||r==='TPI'; }
 var DSTAT={Open:'red',Rectified:'blue',Closed:'green',Cancelled:'grey'};
 function defCard(d){
   var ds=d.defects||[]; if(!ds.length) return '';

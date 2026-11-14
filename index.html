@@ -163,12 +163,12 @@ function homeDash(all){
     (m.late||[]).forEach(function(j){ if(j.impact>0) crit++; if(j.delay>0) top.push({site:x.roName,sid:x.id,code:j.code,desc:j.description,delay:j.delay,impact:j.impact}); });
     Object.keys(x.reasons||{}).forEach(function(k){ rs[k]=(rs[k]||0)+x.reasons[k]; tot+=x.reasons[k]; }); });
   var n=s.length; pp=Math.round(pp/n*10)/10; aa=Math.round(aa/n*10)/10;
-  var h='<div class="card" style="border-left:6px solid '+(cnt.Red?'var(--red)':cnt.Amber?'var(--amber)':'var(--green)')+';margin-top:12px"><div class="muted" style="text-transform:uppercase;font-size:11px;letter-spacing:.5px">Bird\'s-eye view of all sites</div><div style="font-size:15px;line-height:1.5;margin-top:3px"><b>'+n+'</b> active site(s): <b style="color:var(--red)">'+cnt.Red+'</b> red, <b style="color:var(--amber)">'+cnt.Amber+'</b> amber, <b style="color:var(--green)">'+cnt.Green+'</b> on time. Average progress: planned <b>'+pp+'%</b>, actual <b>'+aa+'%</b>. <b>'+late+'</b> work(s) are late, of which <b>'+crit+'</b> are delaying a finish date. <b>'+beyond+'</b> site(s) are forecast to finish after the last date.</div></div>';
+  var h='<div class="card" style="border-left:6px solid '+(cnt.Red?'var(--red)':cnt.Amber?'var(--amber)':'var(--green)')+';margin-top:12px"><div class="muted" style="text-transform:uppercase;font-size:11px;letter-spacing:.5px">Bird\'s-eye view of all sites</div><div style="font-size:15px;line-height:1.5;margin-top:3px"><b>'+n+'</b> active site(s): <b style="color:var(--red)">'+cnt.Red+'</b> red, <b style="color:var(--amber)">'+cnt.Amber+'</b> amber, <b style="color:var(--green)">'+cnt.Green+'</b> on time. Average progress: planned <b>'+pp+'%</b>, actual <b>'+aa+'%</b>. <b>'+late+'</b> work(s) are late, of which <b>'+crit+'</b> are delaying a finish date. <b>'+beyond+'</b> site(s) are forecast to finish after the contractual completion date.</div></div>';
   var C=2*Math.PI*42, off=0, dn='<svg viewBox="0 0 120 120" style="width:150px;height:150px"><circle cx="60" cy="60" r="42" fill="none" stroke="#e8ebf1" stroke-width="16"/>';
   [['Red','#c00000'],['Amber','#b26a00'],['Green','#2e7d32']].forEach(function(g){ var l=cnt[g[0]]/n*C; if(l>0){ dn+='<circle cx="60" cy="60" r="42" fill="none" stroke="'+g[1]+'" stroke-width="16" stroke-dasharray="'+l+' '+(C-l)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 60 60)"/>'; off+=l; } });
   dn+='<text x="60" y="58" text-anchor="middle" font-size="26" font-weight="bold" fill="#1f3864">'+n+'</text><text x="60" y="74" text-anchor="middle" font-size="10" fill="#667085">active sites</text></svg>';
-  var rows=s.slice().sort(function(a,b){ return (b.sm.slip-a.sm.slip)||(b.sm.gap-a.sm.gap); }).map(function(x){ var m=x.sm, c=m.health==='Red'?'red':m.health==='Amber'?'amber':'green';
-    return '<div style="margin:9px 0;cursor:pointer" onclick="openSite(\''+esc(x.id)+'\')"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>'+esc(x.roName)+'</b><span class="muted">Day '+(m.dayNo||'-')+' · <b style="color:'+(m.slip>0?'var(--red)':'var(--green)')+'">'+m.slip+' d behind</b> · finish '+dshow(m.forecastFinish)+' (last date '+dshow(m.newEnd)+')</span></div>'+
+  var rows=s.slice().sort(function(a,b){ return (b.sm.beyondEnd-a.sm.beyondEnd)||(b.sm.slip-a.sm.slip)||(b.sm.gap-a.sm.gap); }).map(function(x){ var m=x.sm, c=m.health==='Red'?'red':m.health==='Amber'?'amber':'green';
+    return '<div style="margin:9px 0;cursor:pointer" onclick="openSite(\''+esc(x.id)+'\')"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>'+esc(x.roName)+'</b><span class="muted">Day '+(m.dayNo||'-')+' · '+(m.beyondEnd>0?'<b style="color:var(--red)">'+m.beyondEnd+' d beyond contractual date</b>':'<b style="color:var(--green)">within contractual date</b>')+' · '+m.slip+' d behind plan · finish '+dshow(m.forecastFinish)+' (contract end '+dshow(m.newEnd)+')</span></div>'+
       '<div class="bar" style="height:10px"><i class="blue" style="width:'+m.plannedPct+'%;opacity:.35;position:absolute"></i><i class="'+c+'" style="width:'+m.actualPct+'%;position:relative"></i></div><div class="muted" style="font-size:12px">Planned '+m.plannedPct+'% · actual '+m.actualPct+'% · '+m.lateCount+' late work(s)</div></div>'; }).join('');
   h+='<div class="card"><div class="row" style="align-items:center"><div style="flex:0 0 160px;min-width:150px;text-align:center">'+dn+'<div style="font-size:12px"><b style="color:#c00000">&#9632;</b> Red '+cnt.Red+' &nbsp;<b style="color:#b26a00">&#9632;</b> Amber '+cnt.Amber+' &nbsp;<b style="color:#2e7d32">&#9632;</b> Green '+cnt.Green+'</div></div><div style="flex:4;min-width:260px"><h3 style="margin-top:0">Site by site (worst first)</h3>'+rows+'<div class="muted" style="font-size:12px">Pale bar = planned by today, solid bar = actual. Tap a site to open it.</div></div></div></div>';
   var rk=Object.keys(rs).sort(function(a,b){ return rs[b]-rs[a]; }), cats={};
@@ -181,13 +181,14 @@ function homeDash(all){
   h+='<div class="card"><h3 style="margin-top:0">Why work is delayed (all active sites)</h3>'+rh+'</div>';
   top.sort(function(a,b){ return b.impact-a.impact||b.delay-a.delay; });
   h+='<div class="card"><h3 style="margin-top:0">Which activities are slowing the sites</h3>'+lagBars(top.slice(0,12).map(function(t){ return {label:t.code+' '+String(t.desc).slice(0,30), sub:t.site, delay:t.delay, impact:t.impact, click:"openSite('"+t.sid+"')"}; }))+(top.length>12?'<div class="muted">and '+(top.length-12)+' more.</div>':'')+'</div>';
-  var pts=[]; var worst=s.slice().sort(function(a,b){ return b.sm.slip-a.sm.slip; })[0];
-  if(worst&&worst.sm.slip>0) pts.push('Most behind: <b>'+esc(worst.roName)+'</b>, '+worst.sm.slip+' days behind, expected finish '+dshow(worst.sm.forecastFinish)+'.');
+  var pts=[]; var worst=s.slice().sort(function(a,b){ return b.sm.beyondEnd-a.sm.beyondEnd; })[0];
+  if(worst&&worst.sm.beyondEnd>0) pts.push('Furthest past the contractual completion date: <b>'+esc(worst.roName)+'</b>, expected to finish '+worst.sm.beyondEnd+' days late ('+dshow(worst.sm.forecastFinish)+' against '+dshow(worst.sm.newEnd)+').');
   if(rk.length){ var tc=Object.keys(cats).sort(function(a,b){ return cats[b]-cats[a]; })[0]; pts.push('Biggest cause of delay: <b>'+esc(tc)+'</b> ('+Math.round(cats[tc]*100/tot)+'% of delay-days). Largest single reason: <b>'+esc(rk[0])+'</b>.'); }
   var unl=s.filter(function(x){ return x.locked!=='YES'; }).length; if(unl) pts.push(unl+' site(s) have a plan that is not yet approved / locked.');
   if(pend) pts.push(pend+' hindrance(s) are waiting for approval.');
   var od=s.reduce(function(a,x){ return a+(x.overdueDefects||0); },0); if(od) pts.push(od+' defect(s) are overdue for rectification.');
   h+='<div class="card" style="border-left:5px solid var(--orange)"><h3 style="margin-top:0">Points for management</h3>'+(pts.length?'<ul style="margin:0;padding-left:20px;line-height:1.7">'+pts.map(function(p){ return '<li>'+p+'</li>'; }).join('')+'</ul>':'<p class="ok" style="margin:0">Nothing needs attention.</p>')+'</div>';
+  h+=legendCard();
   return h;
 }
 
@@ -199,9 +200,9 @@ function renderHome(){
   s.filter(function(x){ return x.status==='Active'; }).forEach(function(x){ cnt[x.sm.health]++; pend+=x.sm.pendingHindrances; });
   var h='<div class="kpis">'+
     kpi(s.filter(function(x){return x.status==='Active';}).length,'Active sites')+
-    kpi('<span style="color:var(--red)">'+cnt.Red+'</span>','Sites in RED (serious delay)')+
-    kpi('<span style="color:var(--amber)">'+cnt.Amber+'</span>','Sites in AMBER (some delay)')+
-    kpi('<span style="color:var(--green)">'+cnt.Green+'</span>','Sites on time')+
+    kpi('<span style="color:var(--red)">'+cnt.Red+'</span>','RED: will finish after the contractual date, or badly behind')+
+    kpi('<span style="color:var(--amber)">'+cnt.Amber+'</span>','AMBER: some delay, can still finish in time')+
+    kpi('<span style="color:var(--green)">'+cnt.Green+'</span>','GREEN: on time')+
     (can('approve')?kpi(pend,'Hindrances waiting for approval'):'')+(can('officer')?kpi('<span style="color:var(--amber)">'+s.filter(function(x){return x.status==='Pending Approval';}).length+'</span>','Sites waiting for your approval'):'')+'</div>';
   h+=homeDash(b.sites);
   h+='<div class="row" style="margin:12px 0;align-items:center"><div><select onchange="ST.homeFilter=this.value;renderHome()">'+
@@ -218,7 +219,7 @@ function renderHome(){
        '<div class="muted">'+esc(x.id)+' · '+esc(x.contractor||'-')+' · '+esc(x.location||'')+'</div></div><span class="chip '+sm.health+'">'+sm.health+'</span></div>'+
        '<div class="row" style="margin-top:8px"><div><div class="muted">Planned '+sm.plannedPct+'%</div><div class="bar"><i class="blue" style="width:'+sm.plannedPct+'%"></i></div>'+
        '<div class="muted">Actual '+sm.actualPct+'%</div><div class="bar"><i class="'+(sm.gap>5?'red':'green')+'" style="width:'+sm.actualPct+'%"></i></div></div>'+
-       '<div class="muted" style="line-height:1.7">Day <b>'+(sm.dayNo||'-')+'</b> · Late jobs <b>'+sm.lateCount+'</b><br>Days behind <b>'+sm.slip+'</b> · Expected finish <b>'+dshow(sm.forecastFinish)+'</b><br>Last date (incl. extension) <b>'+dshow(sm.newEnd)+'</b>'+
+       '<div class="muted" style="line-height:1.7">Day <b>'+(sm.dayNo||'-')+'</b> · Late jobs <b>'+sm.lateCount+'</b><br>Days beyond contractual date <b style="color:'+(sm.beyondEnd>0?'var(--red)':'var(--green)')+'">'+(sm.beyondEnd>0?sm.beyondEnd:0)+'</b> · Behind running plan <b>'+sm.slip+'</b><br>Expected finish <b>'+dshow(sm.forecastFinish)+'</b> · Contractual completion date <b>'+dshow(sm.newEnd)+'</b>'+
        (x.locked!=='YES'?'<br><span style="color:var(--amber)">Plan not yet approved / locked</span>':'')+(x.openDefects?'<br><span style="color:var(--red)"><b>'+x.openDefects+'</b> defect(s) to rectify'+(x.overdueDefects?' ('+x.overdueDefects+' overdue)':'')+'</span>':'')+(x.verifyDefects?'<br><span style="color:var(--blue)">'+x.verifyDefects+' rectified - to verify</span>':'')+'</div></div></div>';
   });
   shell('RO-PACE','Hello '+(ST.user.name||ST.user.email)+' ('+ST.user.role+')',h);
@@ -249,6 +250,40 @@ function dCat(r){
   return 'Contractor side';
 }
 var D_COL={'Contractor side':'#c00000','IOCL / LOI Holder side':'#2f75b5','External (weather / authority / local)':'#7030a0','Knock-on from earlier work':'#b26a00','Reason not recorded':'#9aa3af'};
+
+function legendCard(){
+  var sw=function(c,t){ return '<span class="chip '+c+'">'+t+'</span>'; };
+  var row=function(a,b){ return '<div style="margin:6px 0">'+a+' '+b+'</div>'; };
+  return '<div class="card"><details><summary style="cursor:pointer;font-weight:bold;color:var(--navy)">What do the colours and words on this page mean? (tap to open)</summary><div style="line-height:1.6;margin-top:8px">'+
+  '<h3>Colour of a site</h3>'+
+  row(sw('Green','GREEN'),'<b>On time.</b> The work is expected to finish on or before the contractual completion date, and the progress is close to the plan.')+
+  row(sw('Amber','AMBER'),'<b>Some delay.</b> The work is behind its plan, but it is still expected to finish by the contractual completion date. The delay can be recovered if action is taken now.')+
+  row(sw('Red','RED'),'<b>Serious.</b> At the present pace the work will finish AFTER the contractual completion date, or it is more than 7 days behind its plan, or the actual progress is more than 15 points behind the plan.')+
+  '<h3>Important words</h3>'+
+  row('<b>Contractual completion date</b>','is the last date given in the contract (start date + contract days, plus any extension approved by IOCL). It never moves when the plan is changed. All delay is counted from this date.')+
+  row('<b>Days beyond contractual completion date</b>','is how many days after that date the work will finish if things go on as they are now. This is the real delay.')+
+  row('<b>Days behind running plan</b>','is how far the work is behind the plan that is running now (Plan A, B or C). The plan can be changed, so this can look small even when the contractual date is missed.')+
+  row('<b>Planned progress</b>','is how much work should be finished by today as per the plan. <b>Actual progress</b> is how much is really finished.')+
+  row('<b>Expected finish</b>','is the date the work will be completed if nothing improves.')+
+  row('<b>Spare days</b>','are the days an activity can be late without delaying the whole project. Once spare days are used up, every extra day of delay pushes the finish date.')+
+  row('<b>Delays the project / critical</b>','means the activity has no spare days left, so each day of its delay delays the whole project.')+
+  '<h3>Colours in the bar charts</h3>'+
+  row('<b style="color:#9dc3e6">&#9632;</b>','Light blue = planned time.')+
+  row('<b style="color:#2e7d32">&#9632;</b>','Green = actual work done on time.')+
+  row('<b style="color:#b26a00">&#9632;</b>','Brown = actual work is late, but the delay is covered by spare days.')+
+  row('<b style="color:#c00000">&#9632;</b>','Red = actual work is late and it is delaying the project.')+
+  row('<b style="color:#c00000">&#9633;</b>','Dashed red outline = where the work will end if the delay is not recovered.')+
+  row('<b style="color:#7030a0">&#9670;</b>','Purple diamond = a job to be done by IOCL or the LOI Holder (not the contractor).')+
+  row('<b style="color:#e1b000">&#9632;</b>','Yellow line = today.')+
+  '<h3>Status words</h3>'+
+  row('<b>Done / Received</b>','finished on time.')+row('<b>Done late / Received late</b>','finished, but after the planned date.')+
+  row('<b>On track</b>','running as planned.')+row('<b>Slow</b>','running, but behind where it should be today.')+
+  row('<b>Late</b>','not finished by its planned finish date.')+row('<b>Not started (late)</b>','should have started already, but has not.')+
+  row('<b>Expected late</b>','not due yet, but the expected finish date given is after the planned date.')+
+  row('<b>Not due yet</b>','planned to start later.')+row('<b>Awaited (late)</b>','an IOCL / LOI Holder item that was due and has not been received.')+
+  '</div></details></div>';
+}
+
 function dash(d){
   var sm=d.sm, s=d.site, jobs=d.jobs, hind=d.hind||[];
   var start=dnum(s['Start Date']), today=dnum(ST.boot&&ST.boot.today)||Math.round(Date.now()/864e5);
@@ -260,19 +295,19 @@ function dash(d){
   var beyond=sm.beyondEnd>0, behind=sm.slip>0;
   var col=sm.health==='Red'?'var(--red)':sm.health==='Amber'?'var(--amber)':'var(--green)';
   var head='Day <b>'+(sm.dayNo||'-')+'</b> of '+cd+'. Planned <b>'+sm.plannedPct+'%</b>, actual <b>'+sm.actualPct+'%</b>'+(sm.gap>0?' ('+sm.gap+' points behind)':' (on or ahead of plan)')+'. ';
-  head+= behind ? 'Work is running <b>'+sm.slip+' day(s) behind</b>; expected finish <b>'+dshow(sm.forecastFinish)+'</b>'+(beyond?', which is <b style="color:var(--red)">'+sm.beyondEnd+' day(s) after the last date ('+dshow(sm.newEnd)+')</b>.':', still within the last date ('+dshow(sm.newEnd)+').') : 'No delay to the finish date at present; expected finish <b>'+dshow(sm.forecastFinish)+'</b>.';
+  head+= beyond ? 'The contractual completion date is <b>'+dshow(sm.newEnd)+'</b>. At the present pace the work will finish on <b>'+dshow(sm.forecastFinish)+'</b> - <b style="color:var(--red)">'+sm.beyondEnd+' day(s) AFTER the contractual completion date</b>.' : 'Expected finish <b>'+dshow(sm.forecastFinish)+'</b>, within the contractual completion date ('+dshow(sm.newEnd)+')'+(behind?'; the work is running '+sm.slip+' day(s) behind its plan, so action is needed to stay in time.':'.');
   var h='<div class="card" style="border-left:6px solid '+col+'"><div class="row" style="align-items:center"><div style="flex:3;min-width:240px"><div class="muted" style="text-transform:uppercase;font-size:11px;letter-spacing:.5px">Bird\'s-eye view</div><div style="font-size:15px;line-height:1.5;margin-top:3px">'+head+'</div></div><div style="text-align:center;min-width:90px"><span class="chip '+sm.health+'" style="font-size:16px;padding:6px 16px">'+sm.health.toUpperCase()+'</span></div></div></div>';
   h+='<div class="kpis" style="margin-bottom:12px">'+kpi((sm.dayNo||'-')+'<span class="muted"> / '+cd+'</span>','Day no. today')+kpi(sm.plannedPct+'%','Planned progress')+
     kpi('<span style="color:'+(sm.gap>5?'var(--red)':'var(--green)')+'">'+sm.actualPct+'%</span>','Actual progress')+
-    kpi('<span style="color:'+(sm.slip>0?'var(--red)':'var(--green)')+'">'+sm.slip+'</span>','Days behind plan')+
-    kpi(dshow(sm.forecastFinish),'Expected finish')+kpi(dshow(sm.newEnd),'Last date (incl. '+extra+' days extension)')+'</div>';
+    kpi('<span style="color:'+(sm.beyondEnd>0?'var(--red)':'var(--green)')+'">'+(sm.beyondEnd>0?sm.beyondEnd:0)+'</span>','Days beyond contractual completion date')+kpi('<span style="color:'+(sm.slip>0?'var(--amber)':'var(--green)')+'">'+sm.slip+'</span>','Days behind running plan')+
+    kpi(dshow(sm.forecastFinish),'Expected finish')+kpi(dshow(sm.newEnd),'Contractual completion date (incl. '+extra+' days extension)')+'</div>';
   var maxD=Math.max(lastDay,fcDay,planEnd,(sm.dayNo||0))+6, W=1000, X=function(v){ return 20+(W-40)*v/maxD; };
   var tl='<svg viewBox="0 0 '+W+' 118" style="width:100%;height:auto"><rect x="20" y="44" width="'+(W-40)+'" height="16" rx="8" fill="#e8ebf1"/>';
   var td=sm.dayNo||0;
   tl+='<rect x="20" y="44" width="'+Math.max(0,X(Math.min(td,maxD))-20)+'" height="16" rx="8" fill="#2f75b5"/>';
   if(fcDay>td) tl+='<rect x="'+X(td)+'" y="44" width="'+(X(fcDay)-X(td))+'" height="16" fill="'+(beyond?'#c00000':'#f37022')+'" opacity=".35"/>';
   function mk(v,lab,sub,c,up){ var x=X(v); return '<line x1="'+x+'" x2="'+x+'" y1="'+(up?28:44)+'" y2="'+(up?60:76)+'" stroke="'+c+'" stroke-width="3"/><text x="'+x+'" y="'+(up?20:92)+'" text-anchor="middle" font-size="13" font-weight="bold" fill="'+c+'">'+lab+'</text><text x="'+x+'" y="'+(up?8:108)+'" text-anchor="middle" font-size="11" fill="#667085">'+sub+'</text>'; }
-  tl+=mk(0,'Start','Day 1','#1f3864',true)+mk(td,'Today','Day '+td,'#2f75b5',false)+mk(planEnd,'Plan end','Day '+planEnd,'#1f3864',true)+mk(lastDay,'Last date','Day '+lastDay,'#2e7d32',false)+(Math.abs(fcDay-planEnd)>2?mk(fcDay,'Expected finish','Day '+fcDay,beyond?'#c00000':'#f37022',true):'');
+  tl+=mk(0,'Start','Day 1','#1f3864',true)+mk(td,'Today','Day '+td,'#2f75b5',false)+mk(planEnd,'Plan end','Day '+planEnd,'#1f3864',true)+mk(lastDay,'Contract end','Day '+lastDay,'#2e7d32',false)+(Math.abs(fcDay-planEnd)>2?mk(fcDay,'Expected finish','Day '+fcDay,beyond?'#c00000':'#f37022',true):'');
   tl+='</svg>';
   h+='<div class="card"><h3 style="margin-top:0">Time line: where we are and where we will land</h3>'+tl+'</div>';
   var dl=jobs.filter(function(j){ var q=j.st||{}; return q.delay>0; }).sort(function(a,b){ return (b.st.impact-a.st.impact)||(b.st.delay-a.st.delay); }).map(function(j){ return {label:j.code+' '+String(j.description).slice(0,34), sub:j.st.status, delay:j.st.delay, impact:j.st.impact, click:'barInfo('+d.jobs.indexOf(j)+')'}; });
@@ -285,7 +320,7 @@ function dash(d){
   var sc='<svg viewBox="0 0 '+CW+' '+CH+'" style="width:100%;height:auto">';
   [0,25,50,75,100].forEach(function(g){ sc+='<line x1="40" x2="'+(CW-20)+'" y1="'+PY(g)+'" y2="'+PY(g)+'" stroke="#e3e7ee"/><text x="34" y="'+(PY(g)+4)+'" text-anchor="end" font-size="11" fill="#667085">'+g+'%</text>'; });
   sc+='<polyline fill="none" stroke="#1f3864" stroke-width="3" points="'+pl.map(function(v,i){ return PX(i)+','+PY(v); }).join(' ')+'"/>';
-  sc+='<line x1="'+PX(lastDay)+'" x2="'+PX(lastDay)+'" y1="'+PY(100)+'" y2="200" stroke="#2e7d32" stroke-dasharray="5 4"/><text x="'+PX(lastDay)+'" y="222" text-anchor="middle" font-size="11" fill="#2e7d32">Last date</text>';
+  sc+='<line x1="'+PX(lastDay)+'" x2="'+PX(lastDay)+'" y1="'+PY(100)+'" y2="200" stroke="#2e7d32" stroke-dasharray="5 4"/><text x="'+PX(lastDay)+'" y="222" text-anchor="middle" font-size="11" fill="#2e7d32">Contract end</text>';
   if(td>0){ var ax=PX(Math.min(td,N)), ay=PY(sm.actualPct);
     sc+='<line x1="'+ax+'" x2="'+ax+'" y1="'+PY(100)+'" y2="200" stroke="#2f75b5" stroke-dasharray="3 3"/>'+
         '<line x1="'+PX(0)+'" y1="'+PY(0)+'" x2="'+ax+'" y2="'+ay+'" stroke="#2f75b5" stroke-width="3"/>'+
@@ -328,16 +363,17 @@ function dash(d){
   if(ext.length) pts.push('<b>'+ext.length+'</b> item(s) pending from IOCL / LOI Holder ('+ext.map(function(j){ return esc(j.code)+' '+j.delay+'d'; }).join(', ')+') are not the contractor\'s delay but still hold up the work.');
   if(miss) pts.push(miss+' late work(s) have no reason recorded.');
   if(sm.pendingHindrances) pts.push(sm.pendingHindrances+' hindrance(s) are waiting for approval.');
-  if(beyond) pts.push('At the present pace the finish is <b>'+sm.beyondEnd+' days</b> beyond the last date. Estimated price discount <b>'+sm.discount.pct+'%</b> ('+money(sm.discount.amount)+').');
+  if(beyond) pts.push('At the present pace the finish is <b>'+sm.beyondEnd+' days</b> beyond the contractual completion date ('+dshow(sm.newEnd)+'). Estimated price discount <b>'+sm.discount.pct+'%</b> ('+money(sm.discount.amount)+').');
   if(String(s['Plan Locked']).toUpperCase()!=='YES') pts.push('The plan is not yet approved / locked.');
   h+='<div class="card" style="border-left:5px solid var(--orange)"><h3 style="margin-top:0">Points for management</h3>'+(pts.length?'<ul style="margin:0;padding-left:20px;line-height:1.7">'+pts.map(function(p){ return '<li>'+p+'</li>'; }).join('')+'</ul>':'<p class="ok" style="margin:0">Nothing needs attention. The work is on track.</p>')+'</div>';
+  h+=legendCard();
   return h;
 }
 
 function tSummary(d){
   var sm=d.sm, s=d.site;
   var h=dash(d);
-  if(sm.beyondEnd>0) h+='<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">Expected to finish '+sm.beyondEnd+' days after the last date.</b><br>'+
+  if(sm.beyondEnd>0) h+='<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">Expected to finish '+sm.beyondEnd+' days after the contractual completion date.</b><br>'+
     'Price discount (0.5% per week): <b>'+sm.discount.pct+'%</b> = <b>'+money(sm.discount.amount)+'</b> on work done value '+money(s['Work Done Value'])+'<br>TPI cost recovery: <b>'+money(sm.tpiRecovery)+'</b><div class="muted">Estimate only. Final figure as per approved hindrances & contract.</div></div>';
   h+='<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Late work ('+sm.late.length+')</h3><div style="text-align:right;flex:2">'+
      '<button class="btn wa small" onclick="waOpen()">WhatsApp message</button> <button class="btn sec small" onclick="waCopy()">Copy text</button> '+
@@ -564,7 +600,7 @@ function barInfo(i){
   var eff='';
   if(st.delay>0){
     eff+='<b>'+st.delay+' day(s) late.</b> ';
-    eff+= st.impact>0 ? '<b style="color:var(--red)">This activity alone pushes the project finish by '+st.impact+' day(s)</b> (overall project is '+sm.slip+' day(s) behind; expected finish '+dshow(sm.forecastFinish)+(sm.beyondEnd>0?', '+sm.beyondEnd+' day(s) after the last date':'')+').' : 'It is being absorbed by '+(+j.spare||0)+' spare day(s), so the finish date is not affected yet.';
+    eff+= st.impact>0 ? '<b style="color:var(--red)">This activity alone pushes the project finish by '+st.impact+' day(s)</b> (the work as a whole is '+sm.slip+' day(s) behind its running plan; expected finish '+dshow(sm.forecastFinish)+(sm.beyondEnd>0?', '+sm.beyondEnd+' day(s) after the contractual completion date':'')+').' : 'It is being absorbed by '+(+j.spare||0)+' spare day(s), so the finish date is not affected yet.';
     if(down.length) eff+='<div style="margin-top:6px">Waiting behind it: '+down.slice(0,8).map(function(q){ var p=Math.max(0,st.delay-(+q.spare||0)); return '<b>'+esc(q.code)+'</b> '+esc(String(q.description).slice(0,28))+(p>0?' <span style="color:var(--red)">(+'+p+'d)</span>':''); }).join('; ')+(down.length>8?' and '+(down.length-8)+' more':'')+'.</div>';
   } else eff='No delay. '+(af?'Completed.':'Running as planned.');
   h+='<div class="card" style="margin:10px 0 0;border-left:5px solid '+(st.impact>0?'var(--red)':st.delay>0?'var(--amber)':'var(--green)')+'"><b>Effect on the project</b><div style="margin-top:4px">'+eff+'</div></div>';

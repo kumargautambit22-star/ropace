@@ -103,7 +103,7 @@ try{ ST.token=localStorage.getItem('ropace_token'); }catch(e){}
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s===undefined||s===null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function dshow(s){ if(!s) return '-'; var m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return esc(s); return m[3]+'-'+MON[+m[2]-1]+'-'+m[1].slice(2); }
+function dshow(s){ if(typeof s==='number'&&isFinite(s)) s=new Date(s*864e5).toISOString().slice(0,10); if(!s) return '-'; var m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return esc(s); return m[3]+'-'+m[2]+'-'+m[1].slice(2); }
 function dnum(s){ var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?Math.round(Date.UTC(+m[1],m[2]-1,+m[3])/864e5):null; }
 function money(n){ n=Math.round(+n||0); return 'Rs. '+n.toLocaleString('en-IN'); }
 function toast(t){ var d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(function(){ d.remove(); },3500); }

@@ -456,7 +456,60 @@ function kpi(v,l){ return '<div class="kpi"><div class="v">'+v+'</div><div class
 
 /* ============ one site ============ */
 function openSite(id){ ST.siteId=id; ST.tab=ST.tab||'summary'; api('apiSite',ST.token,id).then(function(d){ ST.site=d; renderSite(); if(role()==='TPI') stalePopup(id); }).catch(function(e){ toast(e.message); }); }
-function refreshSite(d){ ST.site=d; renderSite(); }
+function refreshSite(d){ ST.site=d; renderSite(); if(d&&d.note) toast(d.note); }
+
+function chgPending(d){ return (d.changes||[]).filter(function(c){ return c.status==='Pending'; }); }
+function changesCard(d){
+  if(role()==='CONTRACTOR') return '';
+  var off=can('officer'), P=chgPending(d), H=(d.changes||[]).filter(function(c){ return c.status!=='Pending'; });
+  var h='<div class="card"><b>Add / delete activity</b><div class="muted">'+(off?'Your changes apply at once; linked activities are re-planned automatically.':'Your request goes to the site engineer / Engineer-in-Charge for approval. Linked activities are re-planned automatically once approved.')+' The master plan must stay within its day limit.</div>';
+  if(can('update')) h+='<div style="margin-top:8px"><button class="btn" onclick="addActForm()">Add activity</button> <button class="btn sec" onclick="delActForm()">Delete activity</button></div>';
+  if(P.length) h+='<div style="overflow:auto"><table style="margin-top:10px;width:100%"><tr><th align="left">Waiting for approval</th><th align="left">By</th><th align="left">Reason</th><th></th></tr>'+P.map(function(c){ return '<tr><td>'+esc(c.text)+'</td><td>'+esc(c.by)+'</td><td>'+esc(c.reason)+'</td><td>'+(off?'<button class="btn" onclick="reviewChange(\''+esc(c.id)+'\',\'approve\')">Approve</button> <button class="btn sec" onclick="reviewChange(\''+esc(c.id)+'\',\'reject\')">Reject</button>':'<span class="muted">Pending</span>')+'</td></tr>'; }).join('')+'</table></div>';
+  if(H.length) h+='<div class="muted" style="margin-top:8px">Recent: '+H.map(function(c){ return esc(c.text)+' - <b>'+esc(c.status)+'</b>'; }).join('; ')+'</div>';
+  return h+'</div>';
+}
+function actOpts(jobs){ return jobs.map(function(j){ return '<option value="'+esc(j.code)+'">'+esc(j.code+' - '+String(j.description).slice(0,60))+'</option>'; }).join(''); }
+function addActForm(){
+  var jobs=ST.site.jobs||[], areas=[]; jobs.forEach(function(j){ if(areas.indexOf(j.area)<0) areas.push(j.area); });
+  var opts=actOpts(jobs);
+  modal('<h3>Add activity</h3>'+
+   '<label>Work area</label><input id="aa_area" list="aa_areas" placeholder="Choose or type a new area"><datalist id="aa_areas">'+areas.map(function(a){ return '<option value="'+esc(a)+'">'; }).join('')+'</datalist>'+
+   '<label>Activity</label><input id="aa_desc">'+
+   '<label>Done by</label><select id="aa_by"><option>Contractor</option><option>IOCL</option><option>LOI Holder</option></select>'+
+   '<label>Days needed</label><input id="aa_days" type="number" min="0" max="120" value="3">'+
+   '<label>Share % (optional)</label><input id="aa_share" type="number" min="0" max="20" step="0.01" value="0">'+
+   '<div id="aa_auto" class="muted" style="margin:8px 0">Choose the work area: the system picks the activity it follows and the activity that comes after it.</div>'+
+   '<label>Starts after (auto-selected; change only if the sequence is different)</label><select id="aa_pred" multiple size="5">'+opts+'</select>'+
+   '<label>Comes before (auto-selected)</label><select id="aa_succ" multiple size="5">'+opts+'</select>'+
+   '<label>Reason</label><input id="aa_why" placeholder="Why is this activity needed?">'+
+   '<div class="err" id="aae"></div><div style="margin-top:10px"><button class="btn" onclick="saveAct()">'+(can('officer')?'Add activity':'Send for approval')+'</button> <button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+  $('aa_area').onchange=suggestLinks; $('aa_by').onchange=suggestLinks;
+}
+function suggestLinks(){
+  var a=$('aa_area').value.trim(); if(!a) return;
+  api('apiSuggestLinks',ST.TK,ST.siteId,a,$('aa_by').value).then(function(r){
+    function sel(id,list){ [].forEach.call($(id).options,function(o){ o.selected=list.some(function(x){ return x.code===o.value; }); }); }
+    sel('aa_pred',r.pred); sel('aa_succ',r.succ);
+    $('aa_auto').textContent='Auto-linked: starts after '+(r.pred.map(function(x){ return x.code+' ('+String(x.description).slice(0,40)+')'; }).join(', ')||'project start')+(r.succ.length?'; comes before '+r.succ.map(function(x){ return x.code; }).join(', '):'')+'. You can change the selection below.';
+  }).catch(function(e){ showErr('aae',e); });
+}
+function multiVals(id){ return [].filter.call($(id).options,function(o){ return o.selected; }).map(function(o){ return o.value; }); }
+function saveAct(){
+  var f={area:$('aa_area').value,desc:$('aa_desc').value,doneBy:$('aa_by').value,days:$('aa_days').value,share:$('aa_share').value,reason:$('aa_why').value,pred:multiVals('aa_pred').join(','),succ:multiVals('aa_succ').join(',')};
+  api('apiAddActivity',ST.TK,ST.siteId,f).then(function(d){ closeModal(); refreshSite(d); }).catch(function(e){ showErr('aae',e); });
+}
+function delActForm(){
+  var jobs=(ST.site.jobs||[]).filter(function(j){ return !j.actualStart && !j.actualFinish && !(j.st&&j.st.pct>0); });
+  if(!jobs.length) return toast('No activity can be deleted: all have started.');
+  modal('<h3>Delete activity</h3><div class="muted">Only activities that have not started can be deleted. Linked activities are re-linked automatically.</div><label>Activity</label><select id="da_code">'+actOpts(jobs)+'</select><label>Reason</label><input id="da_why" placeholder="Why should it be deleted?"><div class="err" id="dae"></div><div style="margin-top:10px"><button class="btn" onclick="doDelAct()">'+(can('officer')?'Delete activity':'Send for approval')+'</button> <button class="btn sec" onclick="closeModal()">Cancel</button></div>');
+}
+function doDelAct(){ api('apiDeleteActivity',ST.TK,ST.siteId,$('da_code').value,$('da_why').value).then(function(d){ closeModal(); refreshSite(d); }).catch(function(e){ showErr('dae',e); }); }
+function reviewChange(id,action){
+  var rm=''; if(action==='reject'){ rm=prompt('Reason for rejecting?'); if(!rm) return; } else if(!confirm('Approve this change? Linked activities will be re-planned.')) return;
+  api('apiReviewChange',ST.TK,ST.siteId,id,action,rm).then(function(d){ refreshSite(d); }).catch(function(e){ toast(e.message); });
+}
+function tWork(d){ return changesCard(d)+tWork0(d); }
+
 var TABS=[['summary','Summary'],['mis','MIS report'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['plan','Plan'],['admin','Site settings']];
 function renderSite(){
   var d=ST.site, s=d.site;
@@ -630,7 +683,7 @@ function previewAlert(){
 function sendAlert(){ if(!confirm('Approve the letter to the contractor?\n\nIt goes to the contractor ONLY after BOTH the site engineer and the Engineer-in-Charge have approved it today. Until then it stays as a draft with them.')) return; api('apiSendAlert',ST.token,ST.siteId).then(function(m){ toast(m); }).catch(function(e){ toast(e.message); }); }
 
 /* ---- work list ---- */
-function tWork(d){
+function tWork0(d){
   var h='<div class="card"><div class="muted">Tap a work to '+(can('update')?'update progress, dates, reason for delay & photos.':'see details.')+'</div>';
   var area=null;
   d.jobs.forEach(function(j,i){

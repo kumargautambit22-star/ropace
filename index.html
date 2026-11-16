@@ -965,8 +965,8 @@ function tHistory(d){
 /* ---- site settings (officer / admin) ---- */
 var FIELDS=[['RO Name','text'],['Location','text'],['Divisional Office','text'],['Tender No','text'],['Vendor Code','text'],['Contractor Name','text'],
  ['Contractor Email','email'],['Contractor WhatsApp','tel'],['PO No','text'],['PO Amount','number'],['PO Date','date'],['Handover Date','date'],
- ['Start Date Override','date'],['Contract Days','number'],['Engineer-in-Charge Email','email'],['TPI Email','text'],['Officer Emails','text'],['Work Done Value','number']];
-var HINTS={'PO Date':'PO / commencement order date. Start date = this + 10 days','Handover Date':'Fill only if site was handed over earlier','Start Date Override':'Fill only if Engineer-in-Charge fixes a different start date',
+ ['Start Date Override','date'],['Contract Days','number'],['Site Engineer','text'],['Site Engineer Email','email'],['Site Engineer Mobile','tel'],['Engineer-in-Charge Email','email'],['TPI Email','text'],['Officer Emails','text'],['Work Done Value','number']];
+var HINTS={'Site Engineer':'Site In-Charge (SIC) named in the PO - name','Site Engineer Email':'SIC e-mail: receives this site weekly summary and reminders','Site Engineer Mobile':'SIC mobile number (optional)','PO Date':'PO / commencement order date. Start date = this + 10 days','Handover Date':'Fill only if site was handed over earlier','Start Date Override':'Fill only if Engineer-in-Charge fixes a different start date',
  'TPI Email':'More than one: separate by comma','Officer Emails':'SREH, SRH etc. - get copy of serious reminders','Work Done Value':'Value of work done till last RA bill (for price discount estimate)'};
 var STD=['Site ID','RO Name','Location','Divisional Office','Tender No','Vendor Code','Contractor Name','Contractor Email','Contractor WhatsApp','PO No','PO Amount','PO Date','Handover Date','Start Date','Contract Days','Contract End','Approved Extra Days','New End Date','Plan Finish','Engineer-in-Charge Email','TPI Email','Officer Emails','Work Done Value','Status','Plan Locked','Plan Target Days','Created By','Created At'];
 function siteForm(s){

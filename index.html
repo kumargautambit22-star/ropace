@@ -85,7 +85,7 @@ footer.site{max-width:1100px;margin:0 auto;padding:6px 16px 28px;text-align:cent
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
 .mis h3{border-bottom:2px solid var(--orange);padding-bottom:4px;margin-top:18px}
 .mis table td,.mis table th{font-size:12px}
-.printhead{display:none}
+.printhead{display:block;margin-bottom:8px;border-bottom:3px solid #f37022;padding-bottom:4px}
 .phgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.phbox{border:1px solid #d5dbe7;border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid}.phhead{background:#1f3864;color:#fff;font-weight:bold;font-size:12px;padding:6px 8px}.phbox img{width:100%;display:block;max-height:240px;object-fit:cover}.phcap{padding:6px 8px;font-size:12px}
 @media print{.phgrid{grid-template-columns:repeat(3,1fr)}}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px 18px}
@@ -192,7 +192,7 @@ function misProgress(d){
    ['Contract period',(s['Contract Days']||'-')+' days'+(+s['Approved Extra Days']?' + '+s['Approved Extra Days']+' days extension':'')],['Contractual completion date',dshow(sm.newEnd)],
    ['Expected finish (present pace)',dshow(sm.forecastFinish)],['Days beyond contractual date',sm.beyondEnd>0?'<b style="color:var(--red)">'+sm.beyondEnd+'</b>':'0'],
    ['Planned progress',sm.plannedPct+'%'],['Actual progress',sm.actualPct+'%'],['Engineer-in-charge',s['Engineer-in-Charge Email']||'-'],['TPI',tp||'-'],['Report date',dshow(ST.boot.today)]];
-  var h='<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Project Progress Report (MIS) - '+esc(s['RO Name'])+'</div>';
+  var h='<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Project Progress Report (MIS) - '+esc(s['RO Name'])+'</div>';
   h+='<div class="card"><h3 style="margin-top:0">Project progress report</h3><div class="grid2">'+info.map(function(r){ return '<div style="padding:3px 0;border-bottom:1px dotted #d5dbe7"><span class="muted">'+r[0]+':</span> <b>'+(r[1]===undefined||r[1]===''?'-':(typeof r[1]==='string'&&r[1].indexOf('<')===0?r[1]:esc(r[1])))+'</b></div>'; }).join('')+'</div></div>';
   h+='<div class="card" style="border-left:5px solid '+(sm.health==='Red'?'var(--red)':sm.health==='Amber'?'var(--amber)':'var(--green)')+'"><h3 style="margin-top:0">Effect of present progress on the contractual completion date</h3><p>'+misEffect(sm)+'</p>'+
     '<p class="muted">Site status: <span class="chip '+sm.health+'">'+sm.health.toUpperCase()+'</span> &middot; '+sm.lateCount+' activities delayed &middot; behind running plan by '+sm.slip+' day(s)'+(+sm.hindranceDays?' &middot; approved hindrance days '+sm.hindranceDays:'')+'</p></div>';
@@ -220,7 +220,7 @@ function xlsSave(html,name){
 function misXls(){
   var el=document.getElementById('misdoc').cloneNode(true);
   [].forEach.call(el.querySelectorAll('svg,.legend,.printhead,.chip'),function(n){ if(n.tagName==='svg'||n.className==='legend'||n.className==='printhead') n.remove(); });
-  xlsSave('<h2>'+esc(ST.site.site['RO Name'])+' - Project progress report</h2>'+el.innerHTML,'MIS_'+(ST.misRep||'prog')+'_'+ST.site.site['Site ID']+'_'+ST.boot.today+'.xls');
+  xlsSave('<h2>Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</h2><h3>'+esc(ST.site.site['RO Name'])+' - Project progress report</h3>'+el.innerHTML,'MIS_'+(ST.misRep||'prog')+'_'+ST.site.site['Site ID']+'_'+ST.boot.today+'.xls');
 }
 /* all-sites MIS */
 function misAllContract(){
@@ -228,7 +228,7 @@ function misAllContract(){
   var rows=S.map(function(x){ var m=x.sm;
     return ['<b>'+esc(x.id)+'</b>',esc(x.roName),esc(x.contractor||'-'),esc(x.tender||'-'),esc(x.po||'-'),x.poAmt?money(x.poAmt):'-',dshow(x.startDate),dshow(m.newEnd),dshow(m.forecastFinish),m.beyondEnd>0?'<b style="color:var(--red)">'+m.beyondEnd+'</b>':'0',m.plannedPct+'%',m.actualPct+'%',m.lateCount,'<span class="chip '+m.health+'">'+m.health.toUpperCase()+'</span>'];
   });
-  var h='<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Contract-wise progress report (MIS)</div>';
+  var h='<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>Contract-wise progress report (MIS)</div>';
   h+='<div class="toolbar noprint"><button class="btn" onclick="xlsSave(document.getElementById(\'misdoc\').innerHTML.replace(/<svg[\\s\\S]*?<\\/svg>/g,\'\'),\'MIS_all_sites_\'+ST.boot.today+\'.xls\')">Download Excel</button><button class="btn sec" onclick="window.print()">Print / Save as PDF</button></div><div class="mis" id="misdoc">';
   h+='<div class="card"><h3 style="margin-top:0">Contract-wise progress (as on '+dshow(b.today)+')</h3>'+misTable(rows,['Site','Name of work','Contractor','Tender','PO no.','PO value','Start','Contractual completion','Expected finish','Days beyond','Planned','Actual','Delayed activities','Status'])+'</div>';
   var mx=Math.max.apply(null,S.map(function(x){return Math.max(x.sm.beyondEnd,0);}).concat([1]));
@@ -272,7 +272,7 @@ function staleHome(){
 /* ===== MIS report types ===== */
 var MIS_REPS=[['prog','Project progress'],['exec','Executive summary'],['delay','Delay analysis'],['look','Look-ahead 14 days'],['upd','Update compliance'],['reg','Hindrance & defect register'],['fin','Financial exposure']];
 function misChips(cur,list,fn){ return '<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">'+list.map(function(x){ return '<button class="btn small '+(x[0]===cur?'':'sec')+'" onclick="'+fn+'(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'; }
-function misHead(d,title){ return '<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>'+esc(title)+' - '+esc(d.site['RO Name'])+' (as on '+dshow(ST.boot.today)+')</div>'; }
+function misHead(d,title){ return '<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>'+esc(title)+' - '+esc(d.site['RO Name'])+' (as on '+dshow(ST.boot.today)+')</div>'; }
 function misBar(rows,col){ var mx=Math.max.apply(null,rows.map(function(r){return r[1];}).concat([1])); return rows.map(function(r){ return '<div style="margin:6px 0"><div style="font-size:12px">'+esc(r[0])+' - <b>'+r[1]+' d</b></div><div style="background:#e8ecf3;border-radius:6px;height:14px"><div style="width:'+Math.round(r[1]/mx*100)+'%;background:'+(D_COL[r[0]]||col||'var(--red)')+';height:14px;border-radius:6px;min-width:4px"></div></div></div>'; }).join(''); }
 function misJobs(d){ return d.jobs.filter(function(j){ return j.st.external||+j.days>0; }); }
 function misDelay(d){
@@ -363,7 +363,7 @@ var MISALL_REPS=[['contract','Contract-wise progress'],['delay','Delay analysis 
 function setMisAll(k){ ST.misAllRep=k; misAll(); }
 function misAll(){
   var b=ST.boot, k=ST.misAllRep||'contract', S=b.sites.filter(function(x){ return x.status==='Active'; }), body='';
-  var wrap=function(inner){ return '<div class="printhead"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>MIS - all sites (as on '+dshow(b.today)+')</div><div class="toolbar noprint"><button class="btn" onclick="xlsSave(document.getElementById(\'misdoc\').innerHTML.replace(/<svg[\\s\\S]*?<\\/svg>/g,\'\'),\'MIS_all_sites_\'+ST.boot.today+\'.xls\')">Download Excel</button><button class="btn sec" onclick="window.print()">Print / Save as PDF</button></div><div class="mis" id="misdoc">'+inner+'</div>'; };
+  var wrap=function(inner){ return '<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>MIS - all sites (as on '+dshow(b.today)+')</div><div class="toolbar noprint"><button class="btn" onclick="xlsSave(document.getElementById(\'misdoc\').innerHTML.replace(/<svg[\\s\\S]*?<\\/svg>/g,\'\'),\'MIS_all_sites_\'+ST.boot.today+\'.xls\')">Download Excel</button><button class="btn sec" onclick="window.print()">Print / Save as PDF</button></div><div class="mis" id="misdoc">'+inner+'</div>'; };
   if(k==='contract') body=misAllContract();
   else if(k==='delay'){
     var cat={}, per=[]; S.forEach(function(x){ var tot=0; Object.keys(x.reasons||{}).forEach(function(r){ var c=dCat(r); cat[c]=(cat[c]||0)+x.reasons[r]; tot+=x.reasons[r]; }); per.push([x.roName,tot]); });

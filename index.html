@@ -270,7 +270,7 @@ function staleHome(){
   return '<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">'+l.length+' activit'+(l.length===1?'y is':'ies are')+' not updated although the date has passed</b><div style="margin-top:6px">'+Object.keys(by).map(function(id){ return '<a href="#" onclick="ST.tab=\'work\';openSite(\''+id+'\');return false" style="margin-right:14px"><b>'+esc(by[id].ro)+'</b>: '+by[id].n+'</a>'; }).join('')+'</div></div>';
 }
 /* ===== MIS report types ===== */
-var MIS_REPS=[['prog','Project progress'],['exec','Executive summary'],['delay','Delay analysis'],['look','Look-ahead 14 days'],['upd','Update compliance'],['reg','Hindrance & defect register'],['fin','Financial exposure']];
+var MIS_REPS=[['prog','Project progress'],['exec','Executive summary'],['delay','Delay analysis'],['look','Look-ahead 14 days'],['pend','Pending activities'],['upd','Update compliance'],['reg','Hindrance & defect register'],['fin','Financial exposure']];
 function misChips(cur,list,fn){ return '<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">'+list.map(function(x){ return '<button class="btn small '+(x[0]===cur?'':'sec')+'" onclick="'+fn+'(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'; }
 function misHead(d,title){ return '<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>'+esc(title)+' - '+esc(d.site['RO Name'])+' (as on '+dshow(ST.boot.today)+')</div>'; }
 function misBar(rows,col){ var mx=Math.max.apply(null,rows.map(function(r){return r[1];}).concat([1])); return rows.map(function(r){ return '<div style="margin:6px 0"><div style="font-size:12px">'+esc(r[0])+' - <b>'+r[1]+' d</b></div><div style="background:#e8ecf3;border-radius:6px;height:14px"><div style="width:'+Math.round(r[1]/mx*100)+'%;background:'+(D_COL[r[0]]||col||'var(--red)')+';height:14px;border-radius:6px;min-width:4px"></div></div></div>'; }).join(''); }
@@ -335,7 +335,32 @@ function misFin(d){
   if(!can('officer')) return h+'<div class="card muted">This report is available to IOCL officers only.</div>';
   return h+'<div class="card"><h3 style="margin-top:0">Financial exposure (estimate)</h3><div class="kpis">'+kpi(s['PO Amount']?money(s['PO Amount']):'-','PO value')+kpi(s['Work Done Value']?money(s['Work Done Value']):'-','Work done value')+kpi(sm.beyondEnd>0?sm.beyondEnd:0,'Days beyond contractual date')+kpi(sm.discount?sm.discount.pct+'%':'0%','Price discount')+kpi(sm.discount?money(sm.discount.amount):'-','Discount amount')+kpi(money(sm.tpiRecovery||0),'TPI cost recovery')+'</div><p class="muted">Price discount at the contract rate per week of delay beyond the contractual completion date. Estimate only; final figure as per approved hindrances and contract.</p></div>';
 }
-function misBody(d){ var k=ST.misRep||'prog'; return ({prog:misProgress,exec:misExec,delay:misDelay,look:misLook,upd:misUpd,reg:misReg,fin:misFin}[k]||misProgress)(d); }
+
+function misPending(d){
+  var sm=d.sm, t=dnum(ST.boot.today), end=dnum(sm.newEnd), rows=[], nS=0, nR=0, sh=0, late=0, worst=null;
+  misJobs(d).forEach(function(j){
+    if(j.actualFinish || (j.st&&j.st.status==='Not needed')) return;
+    var started=!!j.actualStart, ps=dnum(j.planStart), pf=dnum(j.planFinish), dy=Math.max(+j.days||0,1);
+    var es, ef;
+    if(started){ es=dnum(j.actualStart); ef=dnum(j.expectedFinish)||pf; if(ef===null||ef<t) ef=t; nR++; }
+    else { es=(ps!==null&&ps>t)?ps:t; ef=es+dy-1; nS++; }
+    var pct=j.st?+j.st.pct||0:0, over=(end!==null&&ef!==null)?ef-end:0, slip=(pf!==null&&ef!==null)?ef-pf:0;
+    sh+=(+j.share||0)*(100-pct)/100; if(slip>0) late++;
+    if(!worst||ef>worst.ef) worst={j:j,ef:ef};
+    rows.push([j.code,esc(j.description),esc(j.area),started?'In progress ('+pct+'%)':'Not started',dshow(ps)+' to '+dshow(pf),dshow(es)+' to '+dshow(ef),slip>0?'<b style="color:var(--red)">'+slip+' d late</b>':'On time',over>0?'<b style="color:var(--red)">'+over+' d beyond</b>':(end!==null?(end-ef)+' d to spare':'-'),ef]);
+  });
+  rows.sort(function(a,b){ return a[8]-b[8]; });
+  var body=rows.map(function(r){ return r.slice(0,8); });
+  var h=misHead(d,'Pending activities and impact on completion');
+  h+=misTable([['Pending activities',rows.length+' ('+nR+' in progress, '+nS+' not started)'],['Pending activities behind their plan',late],['Contractual completion date',dshow(sm.newEnd)],['Expected finish (present pace)',dshow(sm.forecastFinish)],['Days beyond contractual date',sm.beyondEnd>0?sm.beyondEnd:0]],['Item','Status']);
+  h+='<p>'+misEffect(sm)+'</p>';
+  if(worst) h+='<p>The last pending activity to finish is <b>'+esc(worst.j.code+' - '+worst.j.description)+'</b>, expected on '+dshow(worst.ef)+'.</p>';
+  h+='<p class="muted">Expected dates: an activity in progress finishes on its expected finish date (or today if that date has passed); an activity not started begins on its planned start date (or today if that has passed) and runs for its planned duration. Linked activities are shifted by the plan engine.</p>';
+  h+=body.length?misTable(body,['Code','Pending activity','Work area','Status','Planned','Expected','Against plan','Against contractual date']):'<p>No pending activities.</p>';
+  return h;
+}
+
+function misBody(d){ var k=ST.misRep||'prog'; return ({prog:misProgress,exec:misExec,delay:misDelay,look:misLook,pend:misPending,upd:misUpd,reg:misReg,fin:misFin}[k]||misProgress)(d); }
 /* ===== photographs in reports ===== */
 function misPhotos(d,title,max,filter,list){
   var desc={}; d.jobs.forEach(function(j){ desc[j.code]=j.description; });

@@ -347,16 +347,16 @@ function misPending(d){
     var pct=j.st?+j.st.pct||0:0, over=(end!==null&&ef!==null)?ef-end:0, slip=(pf!==null&&ef!==null)?ef-pf:0;
     sh+=(+j.share||0)*(100-pct)/100; if(slip>0) late++;
     if(!worst||ef>worst.ef) worst={j:j,ef:ef};
-    rows.push([j.code,esc(j.description),esc(j.area),started?'In progress ('+pct+'%)':'Not started',dshow(ps)+' to '+dshow(pf),dshow(es)+' to '+dshow(ef),slip>0?'<b style="color:var(--red)">'+slip+' d late</b>':'On time',over>0?'<b style="color:var(--red)">'+over+' d beyond</b>':(end!==null?(end-ef)+' d to spare':'-'),ef]);
+    rows.push([j.code,esc(j.description),esc(j.area),started?'In progress ('+pct+'%)':'Not started',dshow(ps)+' to '+dshow(pf),dshow(es)+' to '+dshow(ef),slip>0?'<b style="color:var(--red)">'+slip+' d late</b>':'On time',over>0?'<b style="color:var(--red)">'+over+' d beyond</b>':(end!==null?(end-ef)+' d to spare':'-'),(j.origFinish?dshow(j.origFinish)+' ('+(ef-dnum(j.origFinish)>0?'+':'')+(ef-dnum(j.origFinish))+' d)':'-'),ef]);
   });
-  rows.sort(function(a,b){ return a[8]-b[8]; });
-  var body=rows.map(function(r){ return r.slice(0,8); });
+  rows.sort(function(a,b){ return a[9]-b[9]; });
+  var body=rows.map(function(r){ return r.slice(0,9); });
   var h=misHead(d,'Pending activities and impact on completion');
   h+=misTable([['Pending activities',rows.length+' ('+nR+' in progress, '+nS+' not started)'],['Pending activities behind their plan',late],['Contractual completion date',dshow(sm.newEnd)],['Expected finish (present pace)',dshow(sm.forecastFinish)],['Days beyond contractual date',sm.beyondEnd>0?sm.beyondEnd:0]],['Item','Status']);
   h+='<p>'+misEffect(sm)+'</p>';
   if(worst) h+='<p>The last pending activity to finish is <b>'+esc(worst.j.code+' - '+worst.j.description)+'</b>, expected on '+dshow(worst.ef)+'.</p>';
   h+='<p class="muted">Expected dates: an activity in progress finishes on its expected finish date (or today if that date has passed); an activity not started begins on its planned start date (or today if that has passed) and runs for its planned duration. Linked activities are shifted by the plan engine.</p>';
-  h+=body.length?misTable(body,['Code','Pending activity','Work area','Status','Planned','Expected','Against plan','Against contractual date']):'<p>No pending activities.</p>';
+  h+=body.length?misTable(body,['Code','Pending activity','Work area','Status','Planned','Expected','Against plan','Against contractual date','Original finish (vs expected)']):'<p>No pending activities.</p>';
   return h;
 }
 
@@ -533,7 +533,9 @@ function reviewChange(id,action){
   var rm=''; if(action==='reject'){ rm=prompt('Reason for rejecting?'); if(!rm) return; } else if(!confirm('Approve this change? Linked activities will be re-planned.')) return;
   api('apiReviewChange',ST.TK,ST.siteId,id,action,rm).then(function(d){ refreshSite(d); }).catch(function(e){ toast(e.message); });
 }
-function tWork(d){ return changesCard(d)+tWork0(d); }
+function origLine(j){ if(!j.origFinish) return ''; var fc=dnum(j.actualFinish)||dnum(j.expectedFinish)||dnum(j.planFinish), of=dnum(j.origFinish), dl=(fc!==null&&of!==null)?fc-of:0; return '<div class="muted"><b>Original (contract) plan:</b> '+dshow(j.origStart)+' to '+dshow(j.origFinish)+(dl>0?' &middot; <b style="color:var(--red)">'+dl+' d beyond original</b>':(dl<0?' &middot; '+(-dl)+' d ahead of original':' &middot; on original'))+'</div>'; }
+function benchCard(d){ var sm=d.sm||{}, bd=+sm.beyondEnd>0; return '<div class="card"><b>Contract benchmark</b><div class="muted">Contractual completion date: <b>'+dshow(sm.newEnd)+'</b> ('+(d.site['Contract Days']||105)+' days). Expected finish at present pace: <b>'+dshow(sm.forecastFinish)+'</b> &middot; '+(bd?'<b style="color:var(--red)">'+sm.beyondEnd+' day(s) beyond the contractual date</b>':'within the contractual date')+'. Each activity below shows its original (contract) plan dates and the delay against them.</div></div>'; }
+function tWork(d){ return benchCard(d)+changesCard(d)+tWork0(d); }
 
 var TABS=[['summary','Summary'],['mis','MIS report'],['work','Work list'],['chart','Bar chart'],['hind','Hindrances'],['defects','Defects'],['photos','Photos'],['history','History'],['plan','Plan'],['admin','Site settings']];
 function renderSite(){
@@ -715,7 +717,7 @@ function tWork0(d){
     if(j.area!==area){ area=j.area; h+='<div class="area">'+esc(area)+'</div>'; }
     var st=j.st;
     h+='<div class="job" onclick="editJob('+i+')"><div class="c">'+esc(j.code)+'</div><div class="d">'+esc(j.description)+
-       '<div class="muted">Plan: '+dshow(j.planStart)+' to '+dshow(j.planFinish)+(j.actualStart?' · Actual: '+dshow(j.actualStart)+' to '+dshow(j.actualFinish):'')+'</div>'+
+       origLine(j)+'<div class="muted">Revised plan: '+dshow(j.planStart)+' to '+dshow(j.planFinish)+(j.actualStart?' · Actual: '+dshow(j.actualStart)+' to '+dshow(j.actualFinish):'')+'</div>'+
        (st.status!=='Not needed'&&!st.external?'<div class="bar" style="max-width:260px"><i class="'+st.colour+'" style="width:'+st.pct+'%"></i></div>':'')+'</div>'+
        '<div class="s"><span class="chip '+st.colour+'">'+esc(st.status)+'</span>'+(st.delay>0?'<div class="muted" style="margin-top:3px">'+st.delay+' days late</div>':'')+'</div></div>';
   });

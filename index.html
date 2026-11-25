@@ -273,7 +273,7 @@ function staleHome(){
   return '<div class="card" style="border-left:5px solid var(--red)"><b style="color:var(--red)">'+l.length+' activit'+(l.length===1?'y is':'ies are')+' not updated although the date has passed</b><div style="margin-top:6px">'+Object.keys(by).map(function(id){ return '<a href="#" onclick="ST.tab=\'work\';openSite(\''+id+'\');return false" style="margin-right:14px"><b>'+esc(by[id].ro)+'</b>: '+by[id].n+'</a>'; }).join('')+'</div></div>';
 }
 /* ===== MIS report types ===== */
-var MIS_REPS=[['prog','Project progress'],['exec','Executive summary'],['delay','Delay analysis'],['look','Look-ahead 14 days'],['pend','Pending activities'],['upd','Update compliance'],['reg','Hindrance & defect register'],['fin','Financial exposure']];
+var MIS_REPS=[['prog','Project progress'],['exec','Executive summary'],['cause','Delay build-up vs contract'],['delay','Delay analysis'],['look','Look-ahead 14 days'],['pend','Pending activities'],['upd','Update compliance'],['reg','Hindrance & defect register'],['fin','Financial exposure']];
 function misChips(cur,list,fn){ return '<div class="noprint" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0">'+list.map(function(x){ return '<button class="btn small '+(x[0]===cur?'':'sec')+'" onclick="'+fn+'(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'; }
 function misHead(d,title){ return '<div class="printhead"><img src="'+LOGO+'" alt="" style="height:46px;vertical-align:middle;margin-right:10px"><b style="font-size:16px">Indian Oil Corporation Limited - Marketing Division, Begusarai Divisional Office</b><br>'+esc(title)+' - '+esc(d.site['RO Name'])+' (as on '+dshow(ST.boot.today)+')</div>'; }
 function misBar(rows,col){ var mx=Math.max.apply(null,rows.map(function(r){return r[1];}).concat([1])); return rows.map(function(r){ return '<div style="margin:6px 0"><div style="font-size:12px">'+esc(r[0])+' - <b>'+r[1]+' d</b></div><div style="background:#e8ecf3;border-radius:6px;height:14px"><div style="width:'+Math.round(r[1]/mx*100)+'%;background:'+(D_COL[r[0]]||col||'var(--red)')+';height:14px;border-radius:6px;min-width:4px"></div></div></div>'; }).join(''); }
@@ -363,7 +363,54 @@ function misPending(d){
   return h;
 }
 
-function misBody(d){ var k=ST.misRep||'prog'; return ({prog:misProgress,exec:misExec,delay:misDelay,look:misLook,pend:misPending,upd:misUpd,reg:misReg,fin:misFin}[k]||misProgress)(d); }
+function misCause(d){
+  var sm=d.sm, t=dnum(ST.boot.today), nE=dnum(sm.newEnd), fc=dnum(sm.forecastFinish), slip=+sm.slip||0, beyond=+sm.beyondEnd||0;
+  var pe=(fc!==null)?fc-slip:null, jobs=misJobs(d), succ={}, oe=null, drv=null;
+  d.jobs.forEach(function(j){ var f=dnum(j.origFinish); if(f!==null&&(+j.days>0||(j.st&&j.st.external))&&(oe===null||f>oe)) oe=f; });
+  d.jobs.forEach(function(j){ String(j.after||'').split(/[,;]/).forEach(function(p){ var m=p.trim().match(/^([A-Za-z]+\d+)/); if(m){ var c=m[1].toUpperCase(); (succ[c]=succ[c]||[]).push(j.code); } }); });
+  function down(c){ var seen={}, stk=[c], out=[]; while(stk.length){ var x=stk.pop(); (succ[x]||[]).forEach(function(s){ if(!seen[s]){ seen[s]=1; out.push(s); stk.push(s); } }); } return out; }
+  var rows=[], nNS=0, nRL=0, nDL=0;
+  jobs.forEach(function(j){
+    if(!j.actualFinish && j.st && j.st.impact>0 && (!drv || j.st.impact>drv.st.impact)) drv=j;
+    if(j.st && j.st.status==='Not needed') return;
+    var of=dnum(j.origFinish), os=dnum(j.origStart); if(of===null) return;
+    var af=dnum(j.actualFinish), as=dnum(j.actualStart), pf=dnum(j.planFinish), dy=Math.max(+j.days||0,1), ef, startLate=0, pos, kind;
+    if(af!==null){ ef=af; if(ef<=of) return; kind=3; pos='Finished late on '+dshow(af); }
+    else if(as===null){
+      ef=Math.max(pf||0, t+dy-1); if(ef<=of && !(os!==null&&os<t)) return; if(ef<=of) ef=of; kind=1;
+      if(os!==null && os<t){ startLate=t-os; pos='<b style="color:var(--red)">NOT STARTED - was due to start on '+dshow(os)+' ('+startLate+' d ago)</b>'; }
+      else pos='Not started (original start '+dshow(os)+'); now planned to start '+dshow(j.planStart);
+    } else {
+      ef=dnum(j.expectedFinish)||pf||of; if(t>of && ef<t) ef=t; if(ef<=of) return; kind=2;
+      pos='In progress ('+((j.st&&j.st.pct)||0)+'% done); expected to finish '+dshow(ef);
+    }
+    var dl=ef-of; if(dl<0) dl=0; if(kind===1&&startLate>0) nNS++; else if(kind===2) nRL++; else if(kind===3) nDL++;
+    var ds=down(j.code), imp=(j.st&&j.st.impact)||0, spare=+j.spare||0, eff;
+    eff=ds.length? '<b>'+ds.length+' later work(s)</b> depend on it ('+ds.slice(0,8).map(esc).join(', ')+(ds.length>8?' ...':'')+'). ' : 'No other work waits for this one. ';
+    if(af===null){
+      if(imp>0) eff+='<b style="color:var(--red)">On the critical path: each extra day moves the completion date by one day (it is pushing completion by '+imp+' d now).</b>';
+      else if(spare>0) eff+='It has '+spare+' d of float, so the delay is absorbed for now, but the float is getting used up.';
+      else eff+='No float left; any further delay moves the completion date.';
+      if(as===null && ds.length) eff+=' The works that follow cannot start until this work is done.';
+    }
+    var why=j.delayReason?esc(j.delayReason):'<b style="color:var(--red)">Reason not recorded - TPI to fill</b>';
+    if(j.delayAnalysis) why+='<div class="muted">'+esc(j.delayAnalysis)+'</div>';
+    rows.push([dl,startLate,['<b>'+esc(j.code)+'</b>',esc(j.description),dshow(j.origStart)+' to '+dshow(j.origFinish),'Start '+(as!==null?dshow(j.actualStart):'-')+'<br>Finish '+(af!==null?dshow(af):dshow(ef)+' (exp.)'),pos,'<b style="color:var(--red)">'+dl+' d</b>',imp>0?imp+' d':'None',esc(dCat(j.delayReason)),why,eff]]);
+  });
+  rows.sort(function(a,b){ return b[0]-a[0] || b[1]-a[1]; });
+  var h=misHead(d,'How the delay beyond the contractual completion date arises');
+  var pd=(pe!==null&&nE!==null)?pe-nE:null, steps=[];
+  steps.push(['A. Contractual completion date (fixed benchmark)',dshow(sm.newEnd),(d.site['Contract Days']||105)+' days from the start date, with any approved extension']);
+  if(pe!==null) steps.push(['B. Completion date as per the revised plan',dshow(pe),pd>0?'<b style="color:var(--red)">'+pd+' d later than the contractual date; this delay is already built into the revised plan</b>':'Within the contractual date (spare '+(-pd)+' d)']);
+  steps.push(['C. Further slip because activities are running late',sm.allDone?'-':slip+' d',sm.allDone?'All works are finished':(drv?'Driven by <b>'+esc(drv.code+' - '+drv.description)+'</b>: late by '+drv.st.delay+' d against the revised plan, float '+(+drv.spare||0)+' d, so it pushes completion by '+drv.st.impact+' d (the largest push of any activity)':'No activity is pushing the completion date')]);
+  steps.push(['D. Expected completion at the present pace (B + C)',dshow(sm.forecastFinish),'']);
+  steps.push(['E. DELAY BEYOND CONTRACTUAL DATE (D minus A)','<b style="color:'+(beyond>0?'var(--red)':'var(--green)')+'">'+beyond+' d</b>',beyond>0?(pd!==null&&pd>0?pd+' d (revised plan beyond contract) + '+slip+' d (new slip) = '+(pd+slip)+' d':'Caused by the new slip of '+slip+' d'):'No delay beyond the contractual date']);
+  h+='<div class="card"><h3 style="margin-top:0">How the '+beyond+'-day delay is arrived at</h3>'+misTable(steps,['Step','Date / days','How it comes'])+'<p class="muted">The completion date moves only by the activity on the critical path (the one with no float), not by adding up the delays of all activities, because many activities run in parallel. Original (Plan A) completion date: <b>'+(oe!==null?dshow(oe):'-')+'</b>.</p></div>';
+  h+='<div class="card"><h3 style="margin-top:0">Against the original contract plan</h3>'+misTable([['Works NOT STARTED although due to start as per the original plan',nNS],['Works in progress but running behind the original finish date',nRL],['Works finished later than the original finish date',nDL]],['Item','Number'])+'</div>';
+  h+='<div class="card"><h3 style="margin-top:0">Activities that are late against the original (contract) plan, with reasons and effect on other works</h3>'+(rows.length?misTable(rows.map(function(r){ return r[2]; }),['No.','Activity','Original plan (contract)','Actual / expected','Position today','Days late vs original finish','Pushes completion by','Responsibility','Reason / analysis','Effect on other works']):'<p class="ok">No activity is behind the original plan.</p>')+'<p class="muted">Delay on the IOCL / LOI Holder side or external causes may justify a time extension; delay on the contractor side attracts the price discount as per contract. TPI should record the reason for every late activity.</p></div>';
+  return h;
+}
+function misBody(d){ var k=ST.misRep||'prog'; return ({prog:misProgress,exec:misExec,delay:misDelay,cause:misCause,look:misLook,pend:misPending,upd:misUpd,reg:misReg,fin:misFin}[k]||misProgress)(d); }
 /* ===== photographs in reports ===== */
 function misPhotos(d,title,max,filter,list){
   var desc={}; d.jobs.forEach(function(j){ desc[j.code]=j.description; });

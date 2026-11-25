@@ -154,8 +154,11 @@ function viewLogin(msg){
   '<label>E-mail</label><input id="em" type="email" autocomplete="username">'+
   '<label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password">'+
   '<div style="margin-top:14px"><button class="btn" id="lb" onclick="doLogin()" style="width:100%">Log in</button></div>'+
-  '<div id="le" class="err">'+esc(msg||'')+'</div><p class="muted">Forgot PIN? Ask your RO-PACE admin to reset it.</p></div></main>';
+  '<div id="le" class="err">'+esc(msg||'')+'</div><p class="muted">Forgot PIN? <a href="#" onclick="forgotPin();return false">Send me a new PIN by e-mail</a> (type your e-mail above first).</p></div></main>';
   $('pin').onkeydown=function(e){ if(e.key==='Enter') doLogin(); };
+}
+function forgotPin(){
+  api('apiForgotPin',$('em').value).then(function(){ $('le').style.color='var(--green,#2e7d32)'; $('le').textContent='If this e-mail is registered, a new PIN has been sent to it. Please check your inbox (also Spam).'; }).catch(function(e){ $('le').style.color=''; showErr('le',e); });
 }
 function doLogin(){
   api('apiLogin',$('em').value,$('pin').value).then(function(r){

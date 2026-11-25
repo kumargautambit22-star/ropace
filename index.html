@@ -1211,5 +1211,56 @@ function resetPin(email){ if(!confirm('Make a new PIN for '+email+'?')) return; 
 /* ============ start ============ */
 if(ST.token) home(); else viewLogin();
 </script>
-</body>
+<style id="ropwa-css">
+#instsheet{position:fixed;left:10px;right:10px;bottom:10px;z-index:99;background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.28);padding:16px;font-family:Arial,Helvetica,sans-serif;color:#1d2433;display:none;max-width:460px;margin:0 auto}
+#instsheet .r{display:flex;gap:12px;align-items:center}
+#instsheet img{width:56px;height:56px;border-radius:12px;flex:none}
+#instsheet b{font-size:17px;display:block;color:#1f3864}
+#instsheet small{font-size:13.5px;color:#667085;line-height:1.35;display:block;margin-top:2px}
+#instsheet .go{display:block;width:100%;margin-top:14px;background:#f37022;color:#fff;border:0;border-radius:12px;font-size:17px;font-weight:bold;min-height:50px}
+#instsheet .no{display:block;width:100%;margin-top:6px;background:none;border:0;color:#667085;font-size:14px;min-height:40px}
+#instsheet ol{margin:12px 0 0;padding-left:0;list-style:none;font-size:15px;line-height:1.4}
+#instsheet li{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+#instsheet li i{flex:none;width:26px;height:26px;border-radius:50%;background:#1f3864;color:#fff;font-style:normal;text-align:center;line-height:26px;font-weight:bold;font-size:14px}
+@media(max-width:700px){
+button,.btn{min-height:44px}
+input,select,textarea{font-size:16px;min-height:44px}
+table.rocards,table.rocards tbody,table.rocards tr,table.rocards td{display:block;width:100%}
+table.rocards thead{display:none}
+table.rocards tr{background:#fff;border:1px solid #e3e7ee;border-radius:12px;margin:0 0 12px;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+table.rocards td{border:0!important;padding:5px 0!important;white-space:normal;word-break:break-word}
+table.rocards td:before{content:attr(data-l);display:block;font-size:11px;color:#667085;text-transform:uppercase;letter-spacing:.4px}
+table.rocards td:first-child{font-weight:bold;color:#1f3864}
+}
+</style><script id="ropwa-js">(function(){
+function icon(n){var c=document.createElement('canvas');c.width=c.height=n;var x=c.getContext('2d');x.fillStyle='#1f3864';x.fillRect(0,0,n,n);x.fillStyle='#f37022';x.fillRect(0,n*.70,n,n*.06);x.fillStyle='#fff';x.textAlign='center';x.font='bold '+(n*.30)+'px Arial';x.fillText('RO',n/2,n*.46);x.font='bold '+(n*.19)+'px Arial';x.fillText('PACE',n/2,n*.64);return c.toDataURL('image/png');}
+var gh=/github\.io$/.test(location.hostname);
+function tag(t,a){var e=document.createElement(t);for(var k in a)e.setAttribute(k,a[k]);document.head.appendChild(e);}
+tag('meta',{name:'theme-color',content:'#1f3864'});
+tag('meta',{name:'apple-mobile-web-app-capable',content:'yes'});
+tag('meta',{name:'mobile-web-app-capable',content:'yes'});
+tag('meta',{name:'apple-mobile-web-app-title',content:'RO-PACE'});
+tag('meta',{name:'apple-mobile-web-app-status-bar-style',content:'black-translucent'});
+var i180=icon(180);tag('link',{rel:'apple-touch-icon',href:i180});
+if(gh)tag('link',{rel:'manifest',href:'manifest.webmanifest'});
+function cards(){var ts=document.querySelectorAll('table:not(.rocards)');for(var i=0;i<ts.length;i++){var t=ts[i],th=t.querySelectorAll('th');if(th.length<8)continue;var s=t.textContent;if(s.indexOf('Effect on other works')<0&&s.indexOf('Reason / analysis')<0)continue;var h=[];for(var j=0;j<th.length;j++)h.push(th[j].textContent.trim());var rs=t.querySelectorAll('tbody tr');for(var r=0;r<rs.length;r++){var td=rs[r].children;for(var c=0;c<td.length;c++)td[c].setAttribute('data-l',h[c]||'');}t.className+=' rocards';}}
+try{new MutationObserver(cards).observe(document.body,{childList:true,subtree:true});}catch(e){}
+var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua),and=/Android/.test(ua);
+var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+if(!gh||standalone||!(ios||and))return;
+try{var d=localStorage.getItem('ropace_inst_no');if(d&&Date.now()-Number(d)<6048e5)return;}catch(e){}
+var dp=null,bar=document.createElement('div');bar.id='instsheet';
+var ic='<img alt="" src="'+icon(192)+'">';
+function head(){return '<div class="r">'+ic+'<div><b>Get the RO-PACE app</b><small>Opens from your home screen like any other app. Free, and it takes about 5 seconds.</small></div></div>';}
+function no(){try{localStorage.setItem('ropace_inst_no',String(Date.now()));}catch(e){}bar.style.display='none';}
+function draw(){
+if(ios){bar.innerHTML=head()+'<ol><li><i>1</i><span>Tap the <b style="display:inline;font-size:15px">Share</b> button at the bottom of Safari (the square with an arrow).</span></li><li><i>2</i><span>Scroll down and tap <b style="display:inline;font-size:15px">Add to Home Screen</b>.</span></li><li><i>3</i><span>Tap <b style="display:inline;font-size:15px">Add</b>. Done!</span></li></ol><button class="no" id="inno">Got it</button>';}
+else{bar.innerHTML=head()+'<button class="go" id="ingo">Add to my phone</button><button class="no" id="inno">Not now</button>';}
+var n=bar.querySelector('#inno');if(n)n.onclick=no;
+var g=bar.querySelector('#ingo');if(g)g.onclick=function(){if(dp){dp.prompt();dp.userChoice.then(function(){dp=null;bar.style.display='none';});}else{bar.innerHTML=head()+'<ol><li><i>1</i><span>Tap the <b style="display:inline;font-size:15px">three dots</b> at the top right of Chrome.</span></li><li><i>2</i><span>Tap <b style="display:inline;font-size:15px">Install app</b> or <b style="display:inline;font-size:15px">Add to Home screen</b>.</span></li></ol><button class="no" id="inno">Got it</button>';bar.querySelector('#inno').onclick=no;}};
+}
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();dp=e;});
+window.addEventListener('appinstalled',function(){bar.style.display='none';});
+document.body.appendChild(bar);draw();setTimeout(function(){bar.style.display='block';},1800);
+})();</script></body>
 </html>
